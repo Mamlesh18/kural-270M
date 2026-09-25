@@ -1,0 +1,43 @@
+# Mid-size sample of the FULL source list (same sources and cleaning as pipeline.yaml, capped
+# per source). Used to size the tokenizer / vocabulary extension before the full run.
+# Run:  python -m data.pipeline --config configs/data/pipeline_sample.yaml
+defaults:
+  - pipeline.yaml
+
+output_dir: ${paths.processed}/sample
+overwrite: true
+num_workers: 4
+log_every: 5000
+
+split:
+  eval_fraction: 0.02
+  eval_max_docs_per_category: 1000
+
+sharding:
+  docs_per_shard: 10000
+  compress: true
+
+# Per-source caps (the source list itself is inherited from pipeline.yaml; lists are replaced
+# on merge, so it is restated here with max_docs added).
+sources:
+  - {name: sangraha_verified_ta, type: hf, path: ai4bharat/sangraha, data_dir: verified/tam, split: train,
+     streaming: true, text_field: text, category: ta_web, lang_hint: ta, allowed_langs: [ta, code_mixed],
+     max_docs: 8000}
+  - {name: fineweb2_ta, type: hf, path: HuggingFaceFW/fineweb-2, config_name: tam_Taml, split: train,
+     streaming: true, text_field: text, category: ta_web, lang_hint: ta, allowed_langs: [ta, code_mixed],
+     max_docs: 8000}
+  - {name: culturax_ta, type: hf, path: parquet, data_files: "hf://datasets/uonlp/CulturaX/ta/*.parquet",
+     split: train, streaming: true, text_field: text, category: ta_web, lang_hint: ta,
+     allowed_langs: [ta, code_mixed], max_docs: 8000}
+  - {name: tamil_squad_contexts, type: hf, path: parquet,
+     data_files: "hf://datasets/RajeevanL/tamil_squad-2.0/data/train-*.parquet", split: train, streaming: true,
+     text_field: Context, strip_prefixes: ["சூழல்:"], category: ta_translated, lang_hint: ta,
+     allowed_langs: [ta, code_mixed]}
+  - {name: wiki_ta, type: hf, path: wikimedia/wikipedia, config_name: 20231101.ta, split: train,
+     streaming: true, text_field: text, category: ta_wiki, lang_hint: ta, allowed_langs: [ta, code_mixed],
+     max_docs: 8000}
+  - {name: sample_tanglish, type: jsonl, path: "${repo_root:}/data/samples/tanglish_spoken_sample.jsonl",
+     text_field: text, category: tanglish, lang_hint: tanglish, allowed_langs: [tanglish, code_mixed, ta],
+     category_by_lang: {ta: ta_spoken}, quality_profile: spoken}
+  - {name: fineweb_edu_en, type: hf, path: HuggingFaceFW/fineweb-edu, config_name: sample-10BT, split: train,
+     streaming: true, text_field: text, category: en, lang_hint: en, allowed_langs: [en], max_docs: 4000}

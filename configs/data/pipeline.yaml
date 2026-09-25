@@ -1,0 +1,139 @@
+# Full Tamil corpus pipeline. Verify each dataset's license / terms before enabling it.
+# Run:  python -m data.pipeline --config configs/data/pipeline.yaml
+defaults:
+  - ../base.yaml
+  - common.yaml
+
+output_dir: ${paths.processed}/full
+num_workers: 8
+chunksize: 64
+
+sources:
+  # ---------------- Tamil (script) ----------------
+  - name: sangraha_verified_ta          # AI4Bharat Sangraha, verified split (web + PDFs), CC-BY-4.0
+    type: hf
+    path: ai4bharat/sangraha
+    data_dir: verified/tam
+    split: train
+    streaming: true
+    text_field: text
+    category: ta_web
+    lang_hint: ta
+    allowed_langs: [ta, code_mixed]
+  - name: fineweb2_ta                   # FineWeb-2 Tamil (ODC-By; CommonCrawl terms apply)
+    type: hf
+    path: HuggingFaceFW/fineweb-2
+    config_name: tam_Taml
+    split: train
+    streaming: true
+    text_field: text
+    category: ta_web
+    lang_hint: ta
+    allowed_langs: [ta, code_mixed]
+  - name: culturax_ta                   # GATED: accept the terms at huggingface.co/datasets/uonlp/CulturaX
+    # and export HF_TOKEN. Loaded straight from the Tamil parquet files because the repo's
+    # loading script is not supported by datasets>=4. Without access this source is logged
+    # as failed and skipped; the rest of the pipeline continues.
+    type: hf
+    path: parquet
+    data_files: hf://datasets/uonlp/CulturaX/ta/*.parquet
+    split: train
+    streaming: true
+    text_field: text
+    category: ta_web
+    lang_hint: ta
+    allowed_langs: [ta, code_mixed]
+  - name: tamil_squad_contexts          # Tamil SQuAD 2.0 passages (translated from English Wikipedia).
+    # 66k rows but only ~17k unique passages; exact dedup keeps one copy of each.
+    type: hf
+    path: parquet
+    data_files: hf://datasets/RajeevanL/tamil_squad-2.0/data/train-*.parquet
+    split: train
+    streaming: true
+    text_field: Context
+    strip_prefixes: ["சூழல்:"]          # every passage starts with the label "Context:"
+    category: ta_translated
+    lang_hint: ta
+    allowed_langs: [ta, code_mixed]
+  - name: wiki_ta
+    type: hf
+    path: wikimedia/wikipedia
+    config_name: 20231101.ta
+    split: train
+    streaming: true
+    text_field: text
+    category: ta_wiki
+    lang_hint: ta
+    allowed_langs: [ta, code_mixed]
+  - name: local_ta_literature           # e.g. public-domain classics you have rights to
+    type: text
+    path: ${paths.raw}/literature
+    doc_sep: file
+    category: ta_literature
+    lang_hint: ta
+    allowed_langs: [ta]
+    quality_profile: ta_literature
+    enabled: false
+  - name: local_ta_news
+    type: jsonl
+    path: ${paths.raw}/news/*.jsonl
+    text_field: [title, body]
+    category: ta_news
+    lang_hint: ta
+    allowed_langs: [ta, code_mixed]
+    enabled: false
+  - name: local_ta_spoken               # transcripts, subtitles, chat logs (spoken register)
+    type: jsonl
+    path: ${paths.raw}/spoken/*.jsonl
+    text_field: text
+    category: ta_spoken
+    lang_hint: ta
+    allowed_langs: [ta, code_mixed, tanglish]
+    category_by_lang: {tanglish: tanglish, code_mixed: code_mixed}
+    quality_profile: spoken
+    enabled: false
+
+  # ---------------- Tanglish / code-mixed ----------------
+  - name: dravidian_codemix_ta          # YouTube comments, Tamil-English code-mixed (short)
+    type: hf
+    path: community-datasets/offenseval_dravidian
+    config_name: tamil
+    split: train
+    streaming: false
+    text_field: text
+    category: tanglish
+    lang_hint: tanglish
+    allowed_langs: [tanglish, code_mixed, ta]
+    category_by_lang: {ta: ta_spoken}
+    quality_profile: spoken
+    enabled: false
+  - name: local_tanglish
+    type: jsonl
+    path: ${paths.raw}/tanglish/*.jsonl
+    text_field: text
+    category: tanglish
+    lang_hint: tanglish
+    allowed_langs: [tanglish, code_mixed]
+    quality_profile: spoken
+    enabled: false
+
+  # ---------------- English replay (preserves English ability) ----------------
+  - name: fineweb_edu_en
+    type: hf
+    path: HuggingFaceFW/fineweb-edu
+    config_name: sample-10BT
+    split: train
+    streaming: true
+    text_field: text
+    max_docs: 3000000
+    category: en
+    lang_hint: en
+    allowed_langs: [en]
+
+augment:
+  enabled: true
+  source_langs: [ta]
+  tanglish_fraction: 0.03
+  spoken_fraction: 0.02
+  variant_prob: 0.15
+  sentence_mix_prob: 0.0
