@@ -1,0 +1,20 @@
+# Run:  python -m inference.quantize --config configs/inference/quantize.yaml
+defaults:
+  - ../base.yaml
+
+quantize:
+  model_path: ${paths.checkpoints}/kural-270m-sft/final
+  output_dir: ${paths.exports}/kural-270m-sft
+  methods: [dynamic_int8, bnb_4bit, gguf]   # failures are reported, not fatal
+  gguf_types: [Q8_0, Q4_K_M]
+  llama_cpp_dir: ${oc.env:LLAMA_CPP_DIR,null}
+  max_length: 1024
+  stride: 512
+  eval_texts:
+    processed_dir: ${paths.processed}/full
+    split: eval
+    max_docs: 200
+    max_chars: 4000
+    sets:
+      ta: [ta_web, ta_wiki]
+      en: [en]

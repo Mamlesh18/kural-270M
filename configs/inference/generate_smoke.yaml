@@ -1,0 +1,12 @@
+defaults:
+  - generate.yaml
+
+inference:
+  model_path: ${paths.exports}/exp10m-sft/dynamic_int8
+  prompts: ["தமிழ்நாட்டின் தலைநகரம் எது?", "Naan romba tired ah iruken, enna pannalam?"]
+  generation:
+    max_new_tokens: 32
+    do_sample: false
+    temperature: null
+    top_p: null
+    top_k: null

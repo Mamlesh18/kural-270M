@@ -1,0 +1,22 @@
+# Run:  python -m inference.generate --config configs/inference/generate.yaml inference.prompt="..."
+defaults:
+  - ../base.yaml
+
+inference:
+  model_path: ${paths.checkpoints}/kural-270m-sft/final
+  dtype: auto
+  device: null
+  load_in_4bit: false
+  load_in_8bit: false
+  chat: true
+  interactive: false
+  system_prompt: null
+  prompt: "தமிழ்நாட்டின் தலைநகரம் எது?"
+  prompts: null
+  generation:
+    max_new_tokens: 256
+    do_sample: true
+    temperature: 0.7
+    top_p: 0.9
+    top_k: 50
+    repetition_penalty: 1.1
