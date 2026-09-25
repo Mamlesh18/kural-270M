@@ -1,0 +1,10 @@
+# Smoke variant: extend Gemma with the smoke Tamil tokenizer.
+defaults:
+  - extend_gemma.yaml
+
+adapt:
+  tamil_tokenizer_dir: ${paths.tokenizers}/tamil_bpe_smoke_16k
+  output_dir: ${paths.tokenizers}/gemma3_tamil_extended_smoke
+  processed_dir: ${paths.processed}/smoke
+  report_categories: [ta_wiki, ta_spoken_synthetic, code_mixed, tanglish_synthetic, en]
+  report_docs_per_category: 100
