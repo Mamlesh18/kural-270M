@@ -1,0 +1,42 @@
+# Evaluation of the smoke / 10M experimental artifacts.
+# Run:  python -m evaluation.run_eval --config configs/eval/eval_smoke.yaml
+defaults:
+  - ../base.yaml
+  - benchmarks.yaml
+
+run_name: smoke
+
+eval:
+  output_dir: ${paths.reports}/eval_smoke
+  texts:
+    processed_dir: ${paths.processed}/smoke
+    split: eval
+    max_docs: 100
+    max_chars: 3000
+    sets:
+      ta: [ta_wiki]
+      code_mixed: [code_mixed]
+      en: [en]
+    files:
+      # NOTE: this seed file is also in the smoke training data - use it for tokenizer
+      # statistics only, not as a held-out perplexity set.
+      tanglish_seed: ${repo_root:}/data/samples/tanglish_spoken_sample.jsonl
+
+  tokenizers:
+    baseline: gemma3
+    list:
+      - {name: gemma3, path: "${base_model.name_or_path}"}
+      - {name: tamil_bpe_smoke_16k, path: "${paths.tokenizers}/tamil_bpe_smoke_16k"}
+      - {name: gemma3_tamil_ext_smoke, path: "${paths.tokenizers}/gemma3_tamil_extended_smoke"}
+
+  models:
+    - {name: exp10m, path: "${paths.checkpoints}/exp10m-tamil16k/final"}
+    - {name: exp10m_sft, path: "${paths.checkpoints}/exp10m-sft/final", chat: true}
+
+  perplexity:
+    max_length: 256
+    stride: 128
+
+  generation:
+    max_new_tokens: 32
+    prompts: ["தமிழ்நாட்டின் தலைநகரம்", "திருக்குறள்", "Naan inniki"]

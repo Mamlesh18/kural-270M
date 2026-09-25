@@ -1,0 +1,48 @@
+# Base Gemma 3 270M vs Kural CPT vs Kural SFT, on identical raw text.
+# Run:  python -m evaluation.run_eval --config configs/eval/eval_270m.yaml
+defaults:
+  - ../base.yaml
+  - benchmarks.yaml
+
+run_name: kural-270m
+
+eval:
+  output_dir: ${paths.reports}/eval_270m
+  texts:
+    processed_dir: ${paths.processed}/full
+    split: eval
+    max_docs: 1000
+    max_chars: 8000
+    sets:
+      ta: [ta_web, ta_wiki, ta_news, ta_literature]
+      ta_spoken: [ta_spoken]
+      tanglish: [tanglish]
+      code_mixed: [code_mixed]
+      en: [en]
+
+  tokenizers:
+    baseline: gemma3
+    list:
+      - {name: gemma3, path: "${base_model.name_or_path}"}
+      - {name: tamil_bpe_32k, path: "${paths.tokenizers}/tamil_bpe_32k"}
+      - {name: bilingual_bpe_64k, path: "${paths.tokenizers}/bilingual_bpe_64k"}
+      - {name: gemma3_tamil_extended, path: "${paths.tokenizers}/gemma3_tamil_extended"}
+
+  models:
+    - {name: gemma3-270m-base, path: "${base_model.name_or_path}"}
+    - {name: kural-270m-cpt, path: "${paths.checkpoints}/kural-270m-stage2-full/final"}
+    - {name: kural-270m-sft, path: "${paths.checkpoints}/kural-270m-sft/final", chat: true}
+
+  perplexity:
+    max_length: 2048
+    stride: 1024
+
+  generation:
+    max_new_tokens: 96
+    kwargs: {do_sample: false, repetition_penalty: 1.1}
+    prompts:
+      - "தமிழ்நாட்டின் வரலாறு"
+      - "திருக்குறள் என்பது"
+      - "நேத்து நான் மார்க்கெட்டுக்கு போனப்போ"
+      - "Machan, inniki evening enna plan?"
+      - "The capital of France is"
