@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="ta">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kural Chat Evaluation</title>
+<style>
+:root {
+  --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --line: #e3e1dc;
+  --accent: #0f766e; --accent-ink: #ffffff; --accent-soft: #e6f2f0;
+  --a: #2563eb; --a-soft: #eaf1fe; --b: #b45309; --b-soft: #fdf2e4;
+  --good: #15803d; --bad: #b91c1c; --warn-soft: #fff7e0;
+  --radius: 10px; --shadow: 0 1px 2px rgba(0,0,0,.05), 0 2px 8px rgba(0,0,0,.04);
+  --font: "Noto Sans Tamil", "Nirmala UI", "Latha", "Tamil Sangam MN", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161615; --panel: #201f1d; --ink: #ecebe7; --muted: #a09e98; --line: #34332f;
+    --accent: #2dd4bf; --accent-ink: #062b27; --accent-soft: #15302d;
+    --a: #7aa7ff; --a-soft: #1b2638; --b: #f0a94b; --b-soft: #33271a;
+    --good: #4ade80; --bad: #f87171; --warn-soft: #332c14;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161615; --panel: #201f1d; --ink: #ecebe7; --muted: #a09e98; --line: #34332f;
+  --accent: #2dd4bf; --accent-ink: #062b27; --accent-soft: #15302d;
+  --a: #7aa7ff; --a-soft: #1b2638; --b: #f0a94b; --b-soft: #33271a;
+  --good: #4ade80; --bad: #f87171; --warn-soft: #332c14; --shadow: none;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font); }
+button, select, input, textarea { font: inherit; color: inherit; }
+header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.bar { max-width: 1200px; margin: 0 auto; padding: 10px 16px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.brand { font-weight: 650; letter-spacing: .01em; }
+.brand small { font-weight: 400; color: var(--muted); margin-left: 6px; }
+nav { display: flex; gap: 4px; margin-left: auto; }
+nav button { border: 1px solid transparent; background: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; color: var(--muted); }
+nav button[aria-selected="true"] { background: var(--panel); border-color: var(--line); color: var(--ink); box-shadow: var(--shadow); }
+.status { font-size: 12.5px; color: var(--muted); }
+main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+section[hidden] { display: none !important; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.grow { flex: 1 1 220px; min-width: 0; }
+label.field { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); }
+select, input[type="number"], input[type="text"], textarea {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; min-width: 0;
+}
+textarea { width: 100%; resize: vertical; }
+select:focus, input:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.btn { border: 1px solid var(--line); background: var(--panel); padding: 7px 14px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+.btn:hover:not(:disabled) { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.small { padding: 3px 9px; font-size: 13px; }
+details.settings { margin-bottom: 14px; }
+details.settings summary { cursor: pointer; color: var(--muted); font-size: 13.5px; }
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
+.hint { font-size: 12.5px; color: var(--muted); }
+.prompt-box { margin-top: 10px; }
+.ref { margin-top: 8px; font-size: 13.5px; background: var(--warn-soft); border-radius: 8px; padding: 8px 10px; }
+.ref[hidden] { display: none; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+@media (max-width: 760px) { .pair { grid-template-columns: 1fr; } nav { margin-left: 0; } }
+.resp { display: flex; flex-direction: column; gap: 10px; min-height: 220px; }
+.resp h3 { margin: 0; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.tag { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; font-weight: 700; font-size: 13px; }
+.resp.A .tag { background: var(--a-soft); color: var(--a); }
+.resp.B .tag { background: var(--b-soft); color: var(--b); }
+.reveal { font-weight: 500; color: var(--muted); font-size: 13px; }
+.text { white-space: pre-wrap; overflow-wrap: anywhere; flex: 1; font-size: 15.5px; }
+.text.empty { color: var(--muted); font-style: italic; }
+.stats { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+.scores { display: grid; gap: 6px; border-top: 1px dashed var(--line); padding-top: 8px; }
+.score-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.score-row span.name { flex: 1; color: var(--muted); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+.seg button { border: 0; background: none; width: 28px; height: 26px; cursor: pointer; font-size: 13px; border-right: 1px solid var(--line); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.vote { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.vote-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+@media (max-width: 760px) { .vote-buttons { grid-template-columns: 1fr 1fr; } }
+.vote-buttons button { padding: 10px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; }
+.vote-buttons button kbd { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: 4px; }
+.vote-buttons button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.vote-buttons button[data-w="a"][aria-pressed="true"] { border-color: var(--a); background: var(--a-soft); }
+.vote-buttons button[data-w="b"][aria-pressed="true"] { border-color: var(--b); background: var(--b-soft); }
+.banner { padding: 10px 12px; border-radius: 8px; font-size: 13.5px; background: var(--accent-soft); }
+.banner.err { background: color-mix(in srgb, var(--bad) 14%, transparent); }
+.banner[hidden] { display: none; }
+/* chat */
+.chat { display: flex; flex-direction: column; height: calc(100vh - 150px); min-height: 480px; padding: 0; }
+.chat-top { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.msgs { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.msg { max-width: 82%; padding: 9px 12px; border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.user { align-self: flex-end; background: var(--accent-soft); }
+.msg.assistant { align-self: flex-start; background: var(--bg); border: 1px solid var(--line); }
+.msg .meta { display: flex; gap: 8px; align-items: center; margin-top: 6px; font-size: 12px; color: var(--muted); white-space: normal; flex-wrap: wrap; }
+.msg .rate-box { margin-top: 8px; white-space: normal; }
+.composer { border-top: 1px solid var(--line); padding: 10px 14px; display: flex; gap: 8px; align-items: flex-end; }
+.composer textarea { min-height: 44px; max-height: 180px; }
+.empty-state { margin: auto; text-align: center; color: var(--muted); max-width: 420px; }
+/* results */
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; color: var(--muted); font-size: 12.5px; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.wr { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.wr .bar-bg { width: 80px; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.wr .bar-fg { height: 100%; background: var(--accent); }
+.results-grid { display: grid; gap: 14px; }
+h2 { font-size: 15px; margin: 0 0 10px; }
+.table-wrap { overflow-x: auto; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand">Kural <small id="title">Tamil chatbot evaluation</small></div>
+    <span class="status" id="status">connecting…</span>
+    <nav role="tablist">
+      <button role="tab" data-tab="compare" aria-selected="true">Blind compare</button>
+      <button role="tab" data-tab="chat" aria-selected="false">Chat</button>
+      <button role="tab" data-tab="results" aria-selected="false">Results</button>
+      <button class="btn small" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">◐</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="banner err" id="fatal" hidden></div>
+
+  <details class="settings panel">
+    <summary>Generation settings</summary>
+    <div class="settings-grid">
+      <label class="field">Max new tokens <input type="number" id="p_max" min="8" max="2048" step="8"></label>
+      <label class="field">Temperature (0 = greedy) <input type="number" id="p_temp" min="0" max="2" step="0.05"></label>
+      <label class="field">Top-p <input type="number" id="p_topp" min="0.05" max="1" step="0.05"></label>
+      <label class="field">Top-k <input type="number" id="p_topk" min="0" max="500" step="1"></label>
+      <label class="field">Repetition penalty <input type="number" id="p_rep" min="1" max="2" step="0.05"></label>
+    </div>
+    <label class="field" style="margin-top:10px">System prompt (optional, chat models only)
+      <input type="text" id="p_system" placeholder="e.g. நீங்கள் ஒரு உதவிகரமான தமிழ் உதவியாளர்.">
+    </label>
+    <p class="hint">Use the same settings for every model you compare. For reproducible comparisons set temperature to 0.</p>
+  </details>
+
+  <!-- ============================ BLIND COMPARE ============================ -->
+  <section id="tab-compare">
+    <div class="panel">
+      <div class="row">
+        <label class="field" style="flex:0 0 170px">Category
+          <select id="c_cat"></select>
+        </label>
+        <label class="field grow">Prompt from the evaluation set
+          <select id="c_prompt"></select>
+        </label>
+        <button class="btn" id="c_random" style="align-self:flex-end">Random unrated</button>
+      </div>
+      <div class="prompt-box">
+        <label class="field">Prompt (edit freely — edited prompts are saved as custom)
+          <textarea id="c_text" rows="3"></textarea>
+        </label>
+        <div class="ref" id="c_ref" hidden></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <label class="row hint" style="gap:6px"><input type="checkbox" id="c_blind" checked> Blind: random pair &amp; order, names hidden until you vote</label>
+        <span class="grow"></span>
+        <label class="field" id="c_pickA_wrap" hidden>Model A <select id="c_pickA"></select></label>
+        <label class="field" id="c_pickB_wrap" hidden>Model B <select id="c_pickB"></select></label>
+        <button class="btn" id="c_toggleRef">Show reference</button>
+        <button class="btn primary" id="c_go">Generate both</button>
+      </div>
+    </div>
+
+    <div class="pair">
+      <div class="panel resp A">
+        <h3><span class="tag">A</span> Response A <span class="reveal" id="c_nameA"></span></h3>
+        <div class="text empty" id="c_outA">Pick a prompt and press “Generate both”.</div>
+        <div class="stats" id="c_statA"></div>
+        <div class="scores" id="c_scoreA"></div>
+      </div>
+      <div class="panel resp B">
+        <h3><span class="tag">B</span> Response B <span class="reveal" id="c_nameB"></span></h3>
+        <div class="text empty" id="c_outB">&nbsp;</div>
+        <div class="stats" id="c_statB"></div>
+        <div class="scores" id="c_scoreB"></div>
+      </div>
+    </div>
+
+    <div class="panel vote">
+      <div class="vote-buttons" id="c_vote">
+        <button data-w="a" aria-pressed="false">A is better<kbd>1</kbd></button>
+        <button data-w="tie" aria-pressed="false">Tie — both good<kbd>2</kbd></button>
+        <button data-w="b" aria-pressed="false">B is better<kbd>3</kbd></button>
+        <button data-w="both_bad" aria-pressed="false">Both bad<kbd>4</kbd></button>
+      </div>
+      <textarea id="c_notes" rows="2" placeholder="Notes (optional): wrong facts, unnatural Tamil, wrong register, English leakage…"></textarea>
+      <div class="row">
+        <span class="hint" id="c_progress"></span>
+        <span class="grow"></span>
+        <button class="btn primary" id="c_submit" disabled>Submit vote</button>
+        <button class="btn" id="c_next" disabled>Next prompt →</button>
+      </div>
+      <div class="banner" id="c_msg" hidden></div>
+    </div>
+  </section>
+
+  <!-- ================================= CHAT ================================= -->
+  <section id="tab-chat" hidden>
+    <div class="panel chat">
+      <div class="chat-top row">
+        <label class="field grow">Model <select id="h_model"></select></label>
+        <span class="hint grow" id="h_desc"></span>
+        <button class="btn" id="h_clear" style="align-self:flex-end">New chat</button>
+      </div>
+      <div class="msgs" id="h_msgs">
+        <div class="empty-state" id="h_empty">
+          <p><strong>Chat with a model.</strong></p>
+          <p class="hint">Try Tamil, spoken Tamil or Tanglish. Rate any answer with the <em>Rate</em> button under it.</p>
+        </div>
+      </div>
+      <div class="composer">
+        <textarea id="h_input" rows="1" placeholder="செய்தியை உள்ளிடுங்கள்…  (Enter = send, Shift+Enter = new line)"></textarea>
+        <button class="btn" id="h_stop" hidden>Stop</button>
+        <button class="btn primary" id="h_send">Send</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =============================== RESULTS =============================== -->
+  <section id="tab-results" hidden>
+    <div class="results-grid">
+      <div class="panel">
+        <div class="row" style="margin-bottom:10px">
+          <h2 style="margin:0">Leaderboard</h2>
+          <span class="hint" id="r_count"></span>
+          <span class="grow"></span>
+          <button class="btn" id="r_refresh">Refresh</button>
+          <a class="btn" href="/api/ratings.jsonl" download>Download ratings (JSONL)</a>
+        </div>
+        <div class="banner" id="r_warn" hidden></div>
+        <div class="table-wrap"><table id="r_table"></table></div>
+        <p class="hint">Win rate = (wins + ½·ties + ½·both-bad) / comparisons. Scores are 1–5 means over every rated response (blind and chat).</p>
+      </div>
+      <div class="panel">
+        <h2>Win rate by category</h2>
+        <div class="table-wrap"><table id="r_cat"></table></div>
+      </div>
+      <div class="panel">
+        <h2>Head to head</h2>
+        <div class="table-wrap"><table id="r_h2h"></table></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const state = { config: null, prompts: [], models: [], criteria: {}, rated: new Set(), compare: null, chat: [], chatAbort: null };
+
+/* ---------------- theme ---------------- */
+(() => {
+  let saved = null;
+  try { saved = localStorage.getItem("kural-theme"); } catch (e) {}
+  if (saved) document.documentElement.dataset.theme = saved;
+  $("themeBtn").onclick = () => {
+    const cur = document.documentElement.dataset.theme
+      || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem("kural-theme", next); } catch (e) {}
+  };
+  try { JSON.parse(localStorage.getItem("kural-rated") || "[]").forEach((x) => state.rated.add(x)); } catch (e) {}
+})();
+
+/* ---------------- tabs ---------------- */
+document.querySelectorAll("nav [role=tab]").forEach((b) => b.onclick = () => showTab(b.dataset.tab));
+function showTab(name) {
+  document.querySelectorAll("nav [role=tab]").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === name));
+  ["compare", "chat", "results"].forEach((t) => $("tab-" + t).hidden = t !== name);
+  if (name === "results") loadResults();
+  if (name === "chat") $("h_input").focus();
+}
+
+/* ---------------- api helpers ---------------- */
+async function api(path, body) {
+  const r = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+function params() {
+  const n = (id) => { const v = $(id).value; return v === "" ? null : Number(v); };
+  const temperature = n("p_temp");
+  return { max_new_tokens: n("p_max"), temperature, top_p: n("p_topp"), top_k: n("p_topk"),
+           repetition_penalty: n("p_rep"), do_sample: temperature !== null && temperature > 0 };
+}
+function withSystem(model, messages) {
+  const sys = $("p_system").value.trim();
+  const m = state.models.find((x) => x.name === model);
+  return sys && m && m.chat ? [{ role: "system", content: sys }, ...messages] : messages;
+}
+/** Streams /api/generate; calls onText(fullText) as tokens arrive; resolves to {text, stats}. */
+async function generate(model, messages, onText, signal) {
+  const r = await fetch("/api/generate", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model, messages: withSystem(model, messages), params: params() }), signal });
+  if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || r.statusText); }
+  const reader = r.body.getReader(); const dec = new TextDecoder();
+  let buf = "", text = "", stats = null;
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i;
+    while ((i = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+      if (!line) continue;
+      const ev = JSON.parse(line);
+      if (ev.error) throw new Error(ev.error);
+      if (ev.text) { text += ev.text; onText(text); }
+      if (ev.done) stats = ev.stats;
+    }
+  }
+  return { text, stats };
+}
+const fmtStats = (s) => s ? `${s.new_tokens} tokens · ${s.seconds}s · ${s.tokens_per_second ?? "–"} tok/s` : "";
+
+/* ---------------- score widgets ---------------- */
+function scoreWidget(container, onChange) {
+  container.innerHTML = "";
+  const values = {};
+  for (const [key, label] of Object.entries(state.criteria)) {
+    const row = document.createElement("div"); row.className = "score-row";
+    const name = document.createElement("span"); name.className = "name"; name.textContent = label;
+    const seg = document.createElement("div"); seg.className = "seg"; seg.setAttribute("role", "group"); seg.setAttribute("aria-label", label);
+    for (let v = 1; v <= 5; v++) {
+      const b = document.createElement("button"); b.type = "button"; b.textContent = v; b.setAttribute("aria-pressed", "false");
+      b.onclick = () => {
+        const off = values[key] === v;
+        if (off) delete values[key]; else values[key] = v;
+        seg.querySelectorAll("button").forEach((x, i) => x.setAttribute("aria-pressed", !off && i + 1 === v));
+        onChange && onChange(values);
+      };
+      seg.appendChild(b);
+    }
+    row.append(name, seg); container.appendChild(row);
+  }
+  const hint = document.createElement("div"); hint.className = "hint"; hint.textContent = "Optional: 1 = poor … 5 = excellent";
+  container.appendChild(hint);
+  return values;
+}
+
+/* ================= BLIND COMPARE ================= */
+function available() { return state.models.filter((m) => m.available); }
+function fillPromptSelect() {
+  const cat = $("c_cat").value;
+  const list = state.prompts.filter((p) => !cat || p.category === cat);
+  $("c_prompt").innerHTML = "";
+  for (const p of list) {
+    const o = document.createElement("option"); o.value = p.id;
+    o.textContent = `${state.rated.has(p.id) ? "✓ " : ""}[${p.category}] ${p.prompt.slice(0, 80)}`;
+    $("c_prompt").appendChild(o);
+  }
+  selectPrompt($("c_prompt").value);
+}
+function selectPrompt(id) {
+  const p = state.prompts.find((x) => x.id === id);
+  $("c_text").value = p ? p.prompt : "";
+  $("c_text").dataset.pid = p ? p.id : "";
+  $("c_ref").hidden = true; $("c_toggleRef").textContent = "Show reference";
+  $("c_ref").textContent = p && p.reference ? "Reference: " + p.reference : "No reference answer for this prompt.";
+}
+function updateProgress() {
+  const done = state.prompts.filter((p) => state.rated.has(p.id)).length;
+  $("c_progress").textContent = `${done} / ${state.prompts.length} set prompts rated in this browser`;
+}
+function pickPair() {
+  const av = available();
+  if ($("c_blind").checked) {
+    const sh = av.map((m) => m.name).sort(() => Math.random() - 0.5);
+    return [sh[0], sh[1]];
+  }
+  return [$("c_pickA").value, $("c_pickB").value];
+}
+function resetCompareUI() {
+  for (const s of ["A", "B"]) {
+    $("c_out" + s).textContent = ""; $("c_out" + s).classList.remove("empty");
+    $("c_stat" + s).textContent = ""; $("c_name" + s).textContent = "";
+  }
+  document.querySelectorAll("#c_vote button").forEach((b) => b.setAttribute("aria-pressed", "false"));
+  $("c_notes").value = ""; $("c_msg").hidden = true; $("c_submit").disabled = true; $("c_next").disabled = true;
+}
+async function runCompare() {
+  const prompt = $("c_text").value.trim();
+  if (!prompt) return;
+  const av = available();
+  if (av.length < 2) return showMsg("c_msg", "Need at least two available models to compare.", true);
+  const [ma, mb] = pickPair();
+  if (!ma || !mb || ma === mb) return showMsg("c_msg", "Choose two different models.", true);
+  const set = state.prompts.find((p) => p.id === $("c_text").dataset.pid);
+  const custom = !set || set.prompt !== prompt;
+  resetCompareUI();
+  const c = state.compare = { prompt, promptId: custom ? null : set.id, category: custom ? "custom" : set.category,
+    reference: custom ? null : set.reference || null, models: { a: ma, b: mb }, out: {}, stats: {}, winner: null,
+    scores: { a: scoreWidget($("c_scoreA"), checkReady), b: scoreWidget($("c_scoreB"), checkReady) }, submitted: false, params: params() };
+  $("c_go").disabled = true;
+  const msgs = [{ role: "user", content: prompt }];
+  const run = (side, el, st) => generate(c.models[side], msgs, (t) => { if (state.compare === c) el.textContent = t; })
+    .then((r) => { c.out[side] = r.text; c.stats[side] = r.stats; if (state.compare === c) { st.textContent = fmtStats(r.stats); if (!r.text) el.textContent = "(empty response)"; } })
+    .catch((e) => { c.out[side] = ""; c.error = true; el.textContent = "⚠ " + e.message; });
+  if (!$("c_blind").checked) { $("c_nameA").textContent = "· " + ma; $("c_nameB").textContent = "· " + mb; }
+  $("c_outA").textContent = "…"; $("c_outB").textContent = "…";
+  await Promise.all([run("a", $("c_outA"), $("c_statA")), run("b", $("c_outB"), $("c_statB"))]);
+  $("c_go").disabled = false;
+  c.done = true; checkReady();
+}
+function checkReady() { const c = state.compare; $("c_submit").disabled = !(c && c.done && c.winner && !c.submitted && !c.error); }
+document.querySelectorAll("#c_vote button").forEach((b) => b.onclick = () => vote(b.dataset.w));
+function vote(w) {
+  const c = state.compare; if (!c || c.submitted) return;
+  c.winner = w;
+  document.querySelectorAll("#c_vote button").forEach((x) => x.setAttribute("aria-pressed", x.dataset.w === w));
+  checkReady();
+}
+async function submitVote() {
+  const c = state.compare; if (!c || !c.winner || c.submitted) return;
+  const clean = (s) => Object.keys(s).length ? { ...s } : null;
+  const sc = {}; if (clean(c.scores.a)) sc.a = clean(c.scores.a); if (clean(c.scores.b)) sc.b = clean(c.scores.b);
+  try {
+    await api("/api/rate", { mode: "compare", blind: $("c_blind").checked, prompt_id: c.promptId, category: c.category,
+      prompt: c.prompt, reference: c.reference, model_a: c.models.a, model_b: c.models.b,
+      response_a: c.out.a, response_b: c.out.b, winner: c.winner, scores: sc, notes: $("c_notes").value.trim() || null,
+      params: c.params, stats: c.stats });
+  } catch (e) { return showMsg("c_msg", "Could not save: " + e.message, true); }
+  c.submitted = true;
+  $("c_nameA").textContent = "· " + c.models.a; $("c_nameB").textContent = "· " + c.models.b;
+  if (c.promptId) { state.rated.add(c.promptId); try { localStorage.setItem("kural-rated", JSON.stringify([...state.rated])); } catch (e) {} }
+  const label = { a: `A (${c.models.a})`, b: `B (${c.models.b})`, tie: "Tie", both_bad: "Both bad" }[c.winner];
+  showMsg("c_msg", `Saved. Your vote: ${label}.`);
+  $("c_submit").disabled = true; $("c_next").disabled = false; updateProgress(); fillPromptSelectKeep();
+}
+function fillPromptSelectKeep() { const v = $("c_prompt").value; fillPromptSelect(); $("c_prompt").value = v; }
+function nextPrompt() {
+  const pool = state.prompts.filter((p) => !state.rated.has(p.id) && (!$("c_cat").value || p.category === $("c_cat").value));
+  const src = pool.length ? pool : state.prompts;
+  const p = src[Math.floor(Math.random() * src.length)];
+  if (!p) return;
+  if ($("c_cat").value && p.category !== $("c_cat").value) $("c_cat").value = "";
+  fillPromptSelect(); $("c_prompt").value = p.id; selectPrompt(p.id); resetCompareUI();
+  $("c_outA").textContent = "Press “Generate both”."; $("c_outA").classList.add("empty");
+  $("c_scoreA").innerHTML = ""; $("c_scoreB").innerHTML = ""; state.compare = null;
+}
+function showMsg(id, text, err) { const el = $(id); el.textContent = text; el.hidden = false; el.classList.toggle("err", !!err); }
+
+$("c_cat").onchange = fillPromptSelect;
+$("c_prompt").onchange = () => selectPrompt($("c_prompt").value);
+$("c_random").onclick = nextPrompt;
+$("c_go").onclick = runCompare;
+$("c_submit").onclick = submitVote;
+$("c_next").onclick = nextPrompt;
+$("c_toggleRef").onclick = () => { const h = !$("c_ref").hidden; $("c_ref").hidden = h; $("c_toggleRef").textContent = h ? "Show reference" : "Hide reference"; };
+$("c_blind").onchange = () => { $("c_pickA_wrap").hidden = $("c_pickB_wrap").hidden = $("c_blind").checked; };
+document.addEventListener("keydown", (e) => {
+  if ($("tab-compare").hidden || ["TEXTAREA", "INPUT", "SELECT"].includes(document.activeElement.tagName)) return;
+  const w = { "1": "a", "2": "tie", "3": "b", "4": "both_bad" }[e.key];
+  if (w) vote(w);
+  if (e.key === "Enter" && !$("c_submit").disabled) submitVote();
+});
+
+/* ================= CHAT ================= */
+function chatModel() { return state.models.find((m) => m.name === $("h_model").value); }
+function renderChatDesc() {
+  const m = chatModel();
+  $("h_desc").textContent = m ? (m.description || "") + (m.chat ? "" : " — base model: continues your text instead of chatting") : "";
+}
+function addBubble(role, text) {
+  $("h_empty").hidden = true;
+  const d = document.createElement("div"); d.className = "msg " + role;
+  const t = document.createElement("div"); t.textContent = text; d.appendChild(t);
+  $("h_msgs").appendChild(d); $("h_msgs").scrollTop = $("h_msgs").scrollHeight;
+  return { box: d, textEl: t };
+}
+async function sendChat() {
+  const text = $("h_input").value.trim(); const m = chatModel();
+  if (!text || !m || state.chatAbort) return;
+  $("h_input").value = ""; autoGrow();
+  state.chat.push({ role: "user", content: text }); addBubble("user", text);
+  const { box, textEl } = addBubble("assistant", "…");
+  const ctrl = state.chatAbort = new AbortController();
+  $("h_send").disabled = true; $("h_stop").hidden = false;
+  const history = state.chat.slice();
+  let reply = "", stats = null, stopped = false;
+  try {
+    const r = await generate(m.name, history, (t) => { textEl.textContent = t; $("h_msgs").scrollTop = $("h_msgs").scrollHeight; }, ctrl.signal);
+    reply = r.text; stats = r.stats;
+  } catch (e) {
+    if (e.name === "AbortError") { stopped = true; reply = textEl.textContent === "…" ? "" : textEl.textContent; }
+    else { textEl.textContent = "⚠ " + e.message; state.chat.pop(); finishChat(); return; }
+  }
+  if (!reply) textEl.textContent = stopped ? "(stopped)" : "(empty response)";
+  state.chat.push({ role: "assistant", content: reply });
+  const meta = document.createElement("div"); meta.className = "meta";
+  meta.textContent = `${m.name}${stats ? " · " + fmtStats(stats) : ""}${stopped ? " · stopped" : ""} `;
+  const rateBtn = document.createElement("button"); rateBtn.className = "btn small"; rateBtn.textContent = "Rate";
+  rateBtn.onclick = () => openChatRating(box, m.name, history, reply, stats, rateBtn);
+  meta.appendChild(rateBtn); box.appendChild(meta);
+  finishChat();
+}
+function finishChat() { state.chatAbort = null; $("h_send").disabled = false; $("h_stop").hidden = true; $("h_input").focus(); }
+function openChatRating(box, model, history, reply, stats, btn) {
+  btn.disabled = true;
+  const wrap = document.createElement("div"); wrap.className = "rate-box scores";
+  const scores = scoreWidget(wrap);
+  const note = document.createElement("input"); note.type = "text"; note.placeholder = "Note (optional)"; note.style.width = "100%";
+  const save = document.createElement("button"); save.className = "btn small primary"; save.textContent = "Save rating";
+  const msg = document.createElement("span"); msg.className = "hint";
+  save.onclick = async () => {
+    if (!Object.keys(scores).length) { msg.textContent = "Pick at least one score."; return; }
+    const last = history[history.length - 1].content;
+    const set = state.prompts.find((p) => p.prompt === last);
+    try {
+      await api("/api/rate", { mode: "chat", model, prompt_id: set ? set.id : null, category: set ? set.category : "custom",
+        prompt: last, messages: history, response: reply, scores: { ...scores }, notes: note.value.trim() || null,
+        params: params(), stats });
+      wrap.innerHTML = ""; const ok = document.createElement("span"); ok.className = "hint"; ok.textContent = "Rating saved ✓"; wrap.appendChild(ok);
+    } catch (e) { msg.textContent = "Could not save: " + e.message; }
+  };
+  const row = document.createElement("div"); row.className = "row"; row.append(save, msg);
+  wrap.append(note, row); box.appendChild(wrap);
+}
+function autoGrow() { const t = $("h_input"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 180) + "px"; }
+$("h_input").addEventListener("input", autoGrow);
+$("h_input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } });
+$("h_send").onclick = sendChat;
+$("h_stop").onclick = () => state.chatAbort && state.chatAbort.abort();
+$("h_clear").onclick = () => { state.chat = []; $("h_msgs").querySelectorAll(".msg").forEach((x) => x.remove()); $("h_empty").hidden = false; };
+$("h_model").onchange = () => { renderChatDesc(); $("h_clear").onclick(); };
+
+/* ================= RESULTS ================= */
+const pct = (x) => x === null || x === undefined ? "–" : Math.round(100 * x) + "%";
+function cell(tag, text, cls) { const c = document.createElement(tag); c.textContent = text; if (cls) c.className = cls; return c; }
+async function loadResults() {
+  let s;
+  try { s = await api("/api/summary"); } catch (e) { return showMsg("r_warn", "Could not load summary: " + e.message, true); }
+  $("r_count").textContent = `${s.n_compare} blind comparisons · ${s.n_chat} chat ratings`;
+  const crit = Object.keys(s.criteria);
+  const warn = s.n_compare < 30;
+  $("r_warn").hidden = !warn;
+  if (warn) { $("r_warn").classList.remove("err"); $("r_warn").textContent = `Only ${s.n_compare} comparisons so far — differences under ~20 points are not reliable until you have a few dozen per model pair.`; }
+  const t = $("r_table"); t.innerHTML = "";
+  const hr = document.createElement("tr");
+  ["Model", "Comparisons", "Win rate", "W / T / L / both bad", ...crit.map((k) => s.criteria[k])].forEach((h, i) => hr.appendChild(cell("th", h, i && i !== 3 ? "num" : "")));
+  t.appendChild(hr);
+  if (!s.ranking.length) { const r = document.createElement("tr"); const c = cell("td", "No ratings yet — vote in Blind compare or rate chat answers."); c.colSpan = 4 + crit.length; r.appendChild(c); t.appendChild(r); }
+  for (const name of s.ranking) {
+    const m = s.models[name]; const r = document.createElement("tr");
+    r.appendChild(cell("td", name));
+    r.appendChild(cell("td", m.comparisons, "num"));
+    const wr = document.createElement("td"); wr.className = "num";
+    const box = document.createElement("span"); box.className = "wr";
+    const bg = document.createElement("span"); bg.className = "bar-bg"; const fg = document.createElement("span"); fg.className = "bar-fg";
+    fg.style.width = (m.win_rate === null ? 0 : 100 * m.win_rate) + "%"; bg.appendChild(fg);
+    box.append(pct(m.win_rate), bg); wr.appendChild(box); r.appendChild(wr);
+    r.appendChild(cell("td", `${m.wins} / ${m.ties} / ${m.losses} / ${m.both_bad}`));
+    crit.forEach((k) => r.appendChild(cell("td", m.scores[k] ?? "–", "num")));
+    t.appendChild(r);
+  }
+  const cats = Object.keys(s.by_category); const ct = $("r_cat"); ct.innerHTML = "";
+  const models = s.ranking;
+  const h2 = document.createElement("tr"); h2.appendChild(cell("th", "Category")); models.forEach((m) => h2.appendChild(cell("th", m, "num"))); ct.appendChild(h2);
+  for (const c of cats) {
+    const r = document.createElement("tr"); r.appendChild(cell("td", c));
+    models.forEach((m) => { const x = s.by_category[c][m]; r.appendChild(cell("td", x && x.comparisons ? `${pct(x.win_rate)} (${x.comparisons})` : "–", "num")); });
+    ct.appendChild(r);
+  }
+  const ht = $("r_h2h"); ht.innerHTML = "";
+  const h3 = document.createElement("tr"); ["Model X", "Model Y", "X wins", "Y wins", "Ties / both bad"].forEach((h, i) => h3.appendChild(cell("th", h, i > 1 ? "num" : ""))); ht.appendChild(h3);
+  for (const h of s.head_to_head) {
+    const r = document.createElement("tr");
+    [h.model_x, h.model_y].forEach((v) => r.appendChild(cell("td", v)));
+    [h.x_wins, h.y_wins, h.ties].forEach((v) => r.appendChild(cell("td", v, "num")));
+    ht.appendChild(r);
+  }
+}
+$("r_refresh").onclick = loadResults;
+
+/* ================= init ================= */
+(async function init() {
+  try {
+    const [cfg, prompts] = await Promise.all([api("/api/config"), api("/api/prompts")]);
+    state.config = cfg; state.prompts = prompts; state.models = cfg.models; state.criteria = cfg.criteria;
+    $("title").textContent = cfg.title;
+    const d = cfg.defaults || {};
+    $("p_max").value = d.max_new_tokens ?? 256; $("p_temp").value = d.temperature ?? 0.7; $("p_topp").value = d.top_p ?? 0.9;
+    $("p_topk").value = d.top_k ?? 50; $("p_rep").value = d.repetition_penalty ?? 1.1;
+    const av = available();
+    $("status").textContent = `${av.length}/${cfg.models.length} models available · ${cfg.device}`;
+    const missing = cfg.models.filter((m) => !m.available);
+    if (missing.length) showMsg("fatal", "Not available yet (skipped): " + missing.map((m) => m.name).join(", ") + ". Train them or edit the server config.");
+    for (const sel of ["h_model", "c_pickA", "c_pickB"]) {
+      $(sel).innerHTML = "";
+      av.forEach((m) => { const o = document.createElement("option"); o.value = m.name; o.textContent = m.name + (m.chat ? "" : " (base)"); $(sel).appendChild(o); });
+    }
+    if (av[1]) $("c_pickB").value = av[1].name;
+    renderChatDesc();
+    const cats = [...new Set(prompts.map((p) => p.category))];
+    $("c_cat").innerHTML = '<option value="">All categories</option>' + cats.map((c) => `<option value="${c}">${c}</option>`).join("");
+    fillPromptSelect(); updateProgress();
+  } catch (e) {
+    showMsg("fatal", "Cannot reach the evaluation server: " + e.message + ". Start it with: python -m inference.server --config configs/inference/eval_server.yaml", true);
+    $("status").textContent = "offline";
+  }
+})();
+</script>
+</body>
+</html>

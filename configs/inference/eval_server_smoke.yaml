@@ -1,0 +1,26 @@
+# Evaluation UI with the models that exist after the smoke runs.
+# The smoke Kural models are tiny / barely trained and are there to test the UI end to end;
+# gemma3-270m-it gives meaningful answers to compare against.
+# Run:  KURAL_BASE_MODEL=unsloth/gemma-3-270m python -m inference.server --config configs/inference/eval_server_smoke.yaml
+defaults:
+  - eval_server.yaml
+
+server:
+  ratings_file: ${paths.reports}/human_eval/ratings_smoke.jsonl
+  models:
+    - name: gemma3-270m-it
+      path: unsloth/gemma-3-270m-it
+      chat: true
+      description: "Baseline: Google's instruction-tuned Gemma 3 270M"
+    - name: smoke-gemma270m-extend
+      path: ${paths.checkpoints}/smoke-gemma270m-extend/final
+      chat: false
+      description: "Gemma 270M + Tamil vocab, 6 CPT steps (smoke)"
+    - name: exp10m-sft
+      path: ${paths.checkpoints}/exp10m-sft/final
+      chat: true
+      description: "10M experimental model + SFT (smoke; expect nonsense)"
+    - name: gemma3-270m-base
+      path: ${base_model.name_or_path}
+      chat: false
+      description: "Baseline: Gemma 3 270M base (text completion)"
