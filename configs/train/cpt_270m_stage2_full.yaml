@@ -1,0 +1,19 @@
+# Stage 2: full-parameter continued pretraining, starting from the stage-1 model.
+#   torchrun --nproc_per_node <gpus> -m training.pretrain --config configs/train/cpt_270m_stage2_full.yaml
+defaults:
+  - cpt_270m.yaml
+
+run_name: kural-270m-stage2-full
+
+model:
+  source: checkpoint
+  path: ${paths.checkpoints}/kural-270m-stage1-embed/final
+
+wandb:
+  tags: [cpt, 270m, extend, stage2]
+
+train:
+  trainable: all
+  args:
+    # Different data order from stage 1 (which only consumed the first ~10% of blocks).
+    data_seed: 4321
