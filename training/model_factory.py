@@ -101,8 +101,17 @@ def build_model_and_tokenizer(cfg) -> tuple[Any, Any, dict[str, Any]]:
     else:
         raise ValueError(f"Unknown model.source {source!r}")
 
-    if model.get_input_embeddings().weight.shape[0] < len(tok):
-        raise ValueError(f"Model vocab ({model.get_input_embeddings().weight.shape[0]}) < tokenizer ({len(tok)})")
+    rows = model.get_input_embeddings().weight.shape[0]
+    if rows < len(tok):
+        # Gemma 3's tokenizer carries <image_soft_token> (id 262144) for the multimodal model;
+        # the text-only 270M has 262144 rows. Added special tokens that never occur in text
+        # are fine; any regular token beyond the embedding matrix is an error.
+        beyond = {t for t, i in tok.get_vocab().items() if i >= rows}
+        harmless = set(tok.added_tokens_encoder)
+        if beyond - harmless:
+            raise ValueError(f"Model vocab ({rows}) < tokenizer ({len(tok)}); out of range: {sorted(beyond)[:5]}")
+        log.warning("Tokenizer has %d added token(s) beyond the embedding matrix (unused in text): %s",
+                    len(beyond), sorted(beyond))
     if getattr(model, "generation_config", None) is not None:
         model.generation_config.pad_token_id = tok.pad_token_id
         model.generation_config.bos_token_id = tok.bos_token_id
@@ -130,10 +139,22 @@ def param_report(model) -> dict[str, int]:
 
 
 def apply_trainable(model, policy: str) -> dict[str, int]:
-    """``all`` | ``embeddings`` | ``embeddings_and_norms``. Returns trainable counts."""
+    """``all`` | ``embeddings`` | ``embeddings_and_norms`` | ``no_embeddings``. Returns trainable counts.
+
+    ``no_embeddings`` freezes the (tied) embedding / output matrix — for Gemma 3 270M that is
+    168M of 268M parameters, so SFT on CPU skips most of the optimizer and weight-gradient
+    work. Only valid when the vocabulary is unchanged (no new rows to learn).
+    """
     if policy == "all":
         for p in model.parameters():
             p.requires_grad_(True)
+    elif policy == "no_embeddings":
+        for p in model.parameters():
+            p.requires_grad_(True)
+        model.get_input_embeddings().weight.requires_grad_(False)
+        out = model.get_output_embeddings()
+        if out is not None:
+            out.weight.requires_grad_(False)
     elif policy in ("embeddings", "embeddings_and_norms"):
         for p in model.parameters():
             p.requires_grad_(False)

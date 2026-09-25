@@ -82,6 +82,7 @@ def run(cfg) -> Path:
     trainer = KuralTrainer(
         model=model, args=args, train_dataset=train_ds, eval_dataset=eval_ds,
         data_collator=ChatCollator(tok.pad_token_id), processing_class=tok, callbacks=callbacks,
+        label_only_logits=bool(cfg.sft.get("label_only_logits", True)),
     )
     result = trainer.train(resume_from_checkpoint=resolve_resume(cfg.train.get("resume", "auto"), output_dir))
     trainer.save_metrics("train", result.metrics)

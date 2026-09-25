@@ -150,6 +150,29 @@ Check each license before using a model trained on the data.
 `data/resources/` only holds word lists used for filtering (Tanglish lexicon, stopwords,
 boilerplate patterns). It contains no training text.
 
+## 3. CPU-only training (laptop recipe)
+
+Measured on a 4-core laptop CPU: full training of Gemma 3 270M runs at ~40 tokens/s (bf16 is far
+slower on CPUs without native bf16). Continued pretraining at useful scale is therefore GPU-only
+(10B tokens ≈ 8 years on CPU). What fits on a CPU is **Tamil instruction tuning** of Google's
+instruction-tuned checkpoint, ~2.2k conversations in ~2.5 hours:
+
+```bash
+python -m training.sft --config configs/sft/sft_270m_cpu.yaml           # train (checkpoints every 20 steps; re-run resumes)
+python -m evaluation.run_eval --config configs/eval/eval_cpu.yaml       # before/after metrics
+python -m inference.quantize --config configs/inference/quantize.yaml \
+  quantize.model_path=workspace/checkpoints/kural-270m-cpu-sft/final \
+  quantize.output_dir=workspace/exports/kural-270m-cpu-sft quantize.methods=[dynamic_int8] \
+  quantize.eval_texts.processed_dir=workspace/processed/sample
+python -m inference.server --config configs/inference/eval_server_cpu.yaml   # test in the browser
+```
+
+Two SFT speed-ups make this feasible (2.3× faster, a third less memory): the 168M-parameter tied
+embedding is frozen (`trainable: no_embeddings`, vocabulary unchanged) and the 262k-way output
+layer is computed only at answer tokens (`sft.label_only_logits`). The original Gemma tokenizer
+is kept on purpose: new Tamil token embeddings need far more training data than a CPU can process.
+Close other heavy apps (browsers, Teams) while training — they compete for the same cores.
+
 ## Evaluating the chatbot (web UI)
 
 ```bash
@@ -158,7 +181,10 @@ python -m inference.server --config configs/inference/eval_server_smoke.yaml  # 
 # open http://127.0.0.1:7860
 ```
 
-The page (`inference/web/eval_chat.html`, served by `inference/server.py`) has three tabs:
+The page (`inference/web/eval_chat.html`, served by `inference/server.py`) has four tabs
+(Blind compare, Chat, Test set, Results). **Test set** runs all 26 evaluation prompts on the
+models you tick and shows the answers side by side next to the reference; ✓ / ✗ marks are saved
+as correctness ratings. The other three:
 
 - **Blind compare**: pick a prompt from the 26-prompt Tamil evaluation set
   (`evaluation/resources/chat_eval_prompts.jsonl`: facts, explanation, writing, grammar, spoken Tamil,

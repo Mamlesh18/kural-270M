@@ -112,3 +112,29 @@ def test_mixture_plan_and_selection():
     assert plan["tiny"]["target_tokens"] == 40                       # capped at 4 epochs
     idx = _select(np.array([10, 20, 30, 40]), 250, np.random.default_rng(0))
     assert np.array([10, 20, 30, 40])[idx].sum() >= 250 and len(idx) >= 8
+
+
+def test_label_only_loss_matches_standard_loss():
+    import torch
+    from transformers import Gemma3ForCausalLM, Gemma3TextConfig
+
+    from training.common import label_only_loss
+    from training.model_factory import apply_trainable
+
+    torch.manual_seed(0)
+    cfg = Gemma3TextConfig(vocab_size=97, hidden_size=32, intermediate_size=64, num_hidden_layers=2,
+                           num_attention_heads=2, num_key_value_heads=1, head_dim=16,
+                           layer_types=["sliding_attention", "full_attention"], final_logit_softcapping=30.0)
+    model = Gemma3ForCausalLM(cfg).eval()
+    ids = torch.randint(4, 97, (3, 12))
+    labels = ids.clone()
+    labels[:, :5] = -100
+    labels[1, 8:] = -100
+    mask = torch.ones_like(ids)
+    ref = model(input_ids=ids, attention_mask=mask, labels=labels).loss
+    ours = label_only_loss(model, ids, mask, labels)
+    assert torch.allclose(ref, ours, atol=1e-5)
+
+    info = apply_trainable(model, "no_embeddings")
+    assert not model.get_input_embeddings().weight.requires_grad
+    assert info["trainable_params"] == sum(p.numel() for n, p in model.named_parameters() if "embed" not in n)

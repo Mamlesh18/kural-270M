@@ -78,12 +78,44 @@ def resolve_resume(setting: Any, output_dir: str) -> str | bool | None:
     return str(setting)
 
 
-class KuralTrainer(Trainer):
-    """Adds perplexity for every ``*_loss`` eval metric and a running token count."""
+def label_only_loss(model, input_ids, attention_mask, labels, num_items_in_batch=None):
+    """Causal-LM loss that runs the output projection only where ``labels != -100``.
 
-    def __init__(self, *args, tokens_per_step: int | None = None, **kwargs):
+    Gemma 3 270M's 262k-row output layer costs more than the whole transformer, so for
+    SFT (loss on assistant tokens only, typically 30–50% of positions) skipping the
+    masked positions roughly halves the output-layer cost. Mathematically identical to
+    the standard loss.
+    """
+    core = model.module if hasattr(model, "module") else model
+    hidden = core.model(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
+    targets = labels[:, 1:]
+    keep = targets != -100
+    logits = core.lm_head(hidden[:, :-1][keep]).float()
+    cap = getattr(core.config, "final_logit_softcapping", None)
+    if cap:
+        logits = torch.tanh(logits / cap) * cap
+    loss = torch.nn.functional.cross_entropy(logits, targets[keep], reduction="sum")
+    denom = num_items_in_batch if num_items_in_batch is not None else keep.sum()
+    return loss / torch.as_tensor(denom, device=loss.device).clamp(min=1)
+
+
+class KuralTrainer(Trainer):
+    """Adds perplexity for every ``*_loss`` eval metric and a running token count.
+
+    ``label_only_logits=True`` switches to :func:`label_only_loss` (for SFT).
+    """
+
+    def __init__(self, *args, tokens_per_step: int | None = None, label_only_logits: bool = False, **kwargs):
         super().__init__(*args, **kwargs)
         self.tokens_per_step = tokens_per_step
+        self.label_only_logits = label_only_logits
+
+    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
+        if not self.label_only_logits or return_outputs:
+            return super().compute_loss(model, inputs, return_outputs=return_outputs,
+                                        num_items_in_batch=num_items_in_batch)
+        return label_only_loss(model, inputs["input_ids"], inputs.get("attention_mask"), inputs["labels"],
+                               num_items_in_batch)
 
     def log(self, logs: dict[str, float], *args, **kwargs) -> None:
         for key in list(logs):

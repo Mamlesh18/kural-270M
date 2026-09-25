@@ -86,8 +86,12 @@ class ModelPool:
                 t0 = time.time()
                 log.info("Loading %s from %s ...", name, path)
                 tok = AutoTokenizer.from_pretrained(path)
-                model = AutoModelForCausalLM.from_pretrained(path, torch_dtype=torch_dtype(self.dtype))
-                model.to(self.device).eval()
+                if (Path(path) / "quantized_model.pt").exists():
+                    # dynamic-int8 export from inference.quantize (CPU only, pickled module)
+                    model = torch.load(Path(path) / "quantized_model.pt", weights_only=False).eval()
+                else:
+                    model = AutoModelForCausalLM.from_pretrained(path, torch_dtype=torch_dtype(self.dtype))
+                    model.to(self.device).eval()
                 if tok.chat_template is None:
                     tok.chat_template = DEFAULT_CHAT_TEMPLATE
                 self._models[name] = (model, tok)
@@ -109,7 +113,7 @@ class ModelPool:
         from transformers import StoppingCriteriaList, TextIteratorStreamer
 
         model, tok = self.get(name)
-        ids = self._prompt_ids(name, tok, messages).to(self.device)
+        ids = self._prompt_ids(name, tok, messages).to(next(model.parameters()).device)
         gen = {k: v for k, v in params.items() if k in GEN_KEYS and v is not None}
         gen.setdefault("max_new_tokens", 256)
         gen["max_new_tokens"] = int(min(int(gen["max_new_tokens"]), 2048))

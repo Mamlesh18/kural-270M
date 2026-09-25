@@ -16,6 +16,7 @@ A source is a mapping in the pipeline config::
       skip_docs: 0
       filter: {field: language, equals: Tamil}   # optional row filter
       strip_prefixes: ["சூழல்:"]  # optional labels removed from the start of the text
+      shuffle_seed: null            # hf only: shuffle before max_docs to take a random sample
       category: ta_wiki             # mixture bucket for docs detected as lang_hint
       lang_hint: ta                 # expected language label
       allowed_langs: [ta, code_mixed]
@@ -91,6 +92,11 @@ def _iter_hf(src: Mapping[str, Any]) -> Iterator[dict[str, Any]]:
     if token:
         kwargs["token"] = token
     ds = load_dataset(src["path"], src.get("config_name"), **kwargs)
+    if src.get("shuffle_seed") is not None:
+        # Random sample instead of the first rows (with max_docs). Streaming datasets are
+        # shuffled through a buffer, so the sample is approximate.
+        seed = int(src["shuffle_seed"])
+        ds = ds.shuffle(seed=seed, buffer_size=10_000) if kwargs["streaming"] else ds.shuffle(seed=seed)
     yield from ds
 
 

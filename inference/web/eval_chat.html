@@ -113,6 +113,17 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .wr .bar-bg { width: 80px; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
 .wr .bar-fg { height: 100%; background: var(--accent); }
 .results-grid { display: grid; gap: 14px; }
+/* test set */
+.model-checks { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.model-checks label { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; }
+table.testset td { vertical-align: top; }
+table.testset td.ans { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 220px; font-size: 14px; }
+table.testset td.ans.running { color: var(--muted); }
+table.testset .marks { display: flex; gap: 4px; margin-top: 6px; }
+table.testset .marks button { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 1px 8px; cursor: pointer; }
+table.testset .marks button[aria-pressed="true"][data-v="good"] { border-color: var(--good); color: var(--good); font-weight: 700; }
+table.testset .marks button[aria-pressed="true"][data-v="bad"] { border-color: var(--bad); color: var(--bad); font-weight: 700; }
+table.testset .ref-cell { color: var(--muted); font-size: 13px; max-width: 220px; }
 h2 { font-size: 15px; margin: 0 0 10px; }
 .table-wrap { overflow-x: auto; }
 </style>
@@ -125,6 +136,7 @@ h2 { font-size: 15px; margin: 0 0 10px; }
     <nav role="tablist">
       <button role="tab" data-tab="compare" aria-selected="true">Blind compare</button>
       <button role="tab" data-tab="chat" aria-selected="false">Chat</button>
+      <button role="tab" data-tab="testset" aria-selected="false">Test set</button>
       <button role="tab" data-tab="results" aria-selected="false">Results</button>
       <button class="btn small" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">◐</button>
     </nav>
@@ -232,6 +244,22 @@ h2 { font-size: 15px; margin: 0 0 10px; }
     </div>
   </section>
 
+  <!-- =============================== TEST SET =============================== -->
+  <section id="tab-testset" hidden>
+    <div class="panel">
+      <div class="row" style="align-items:flex-end">
+        <div class="field grow"><span class="hint">Models to test</span><div class="model-checks" id="t_models"></div></div>
+        <label class="field" style="flex:0 0 170px">Category <select id="t_cat"></select></label>
+        <button class="btn primary" id="t_run">Run test set</button>
+        <button class="btn" id="t_stop" hidden>Stop</button>
+      </div>
+      <p class="hint" id="t_status">Runs every prompt of the evaluation set on each selected model (one after another) and shows the answers side by side. Mark answers ✓ / ✗ — marks are saved as correctness ratings (5 / 1) and appear in Results.</p>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <div class="table-wrap"><table class="testset" id="t_table"></table></div>
+    </div>
+  </section>
+
   <!-- =============================== RESULTS =============================== -->
   <section id="tab-results" hidden>
     <div class="results-grid">
@@ -283,7 +311,7 @@ const state = { config: null, prompts: [], models: [], criteria: {}, rated: new 
 document.querySelectorAll("nav [role=tab]").forEach((b) => b.onclick = () => showTab(b.dataset.tab));
 function showTab(name) {
   document.querySelectorAll("nav [role=tab]").forEach((b) => b.setAttribute("aria-selected", b.dataset.tab === name));
-  ["compare", "chat", "results"].forEach((t) => $("tab-" + t).hidden = t !== name);
+  ["compare", "chat", "testset", "results"].forEach((t) => $("tab-" + t).hidden = t !== name);
   if (name === "results") loadResults();
   if (name === "chat") $("h_input").focus();
 }
@@ -542,6 +570,79 @@ $("h_stop").onclick = () => state.chatAbort && state.chatAbort.abort();
 $("h_clear").onclick = () => { state.chat = []; $("h_msgs").querySelectorAll(".msg").forEach((x) => x.remove()); $("h_empty").hidden = false; };
 $("h_model").onchange = () => { renderChatDesc(); $("h_clear").onclick(); };
 
+/* ================= TEST SET ================= */
+state.testAbort = null;
+function renderModelChecks() {
+  const box = $("t_models"); box.innerHTML = "";
+  available().forEach((m, i) => {
+    const l = document.createElement("label"); const c = document.createElement("input");
+    c.type = "checkbox"; c.value = m.name; c.checked = m.chat && i < 3;
+    l.append(c, document.createTextNode(m.name + (m.chat ? "" : " (base)"))); box.appendChild(l);
+  });
+}
+async function runTestSet() {
+  const models = [...$("t_models").querySelectorAll("input:checked")].map((c) => c.value);
+  const cat = $("t_cat").value;
+  const prompts = state.prompts.filter((p) => !cat || p.category === cat);
+  if (!models.length) { $("t_status").textContent = "Select at least one model."; return; }
+  const t = $("t_table"); t.innerHTML = "";
+  const hr = document.createElement("tr");
+  ["Category", "Prompt", "Reference", ...models].forEach((h) => hr.appendChild(cell("th", h))); t.appendChild(hr);
+  const cells = {};
+  for (const p of prompts) {
+    const r = document.createElement("tr");
+    r.appendChild(cell("td", p.category)); r.appendChild(cell("td", p.prompt));
+    r.appendChild(cell("td", p.reference || "–", "ref-cell"));
+    for (const m of models) { const c = cell("td", "waiting…", "ans running"); r.appendChild(c); cells[p.id + "|" + m] = c; }
+    t.appendChild(r);
+  }
+  const ctrl = state.testAbort = new AbortController();
+  $("t_run").disabled = true; $("t_stop").hidden = false;
+  let done = 0; const total = prompts.length * models.length; const t0 = Date.now();
+  try {
+    for (const m of models) {            // model-major: each model is loaded once
+      for (const p of prompts) {
+        const c = cells[p.id + "|" + m];
+        c.textContent = "…";
+        const msgs = [{ role: "user", content: p.prompt }];
+        let res;
+        try { res = await generate(m, msgs, (x) => { c.textContent = x; }, ctrl.signal); }
+        catch (e) { if (e.name === "AbortError") throw e; c.textContent = "⚠ " + e.message; c.classList.remove("running"); continue; }
+        c.classList.remove("running");
+        if (!res.text) c.textContent = "(empty)";
+        addMarks(c, m, p, res);
+        done += 1;
+        const eta = Math.round((Date.now() - t0) / done * (total - done) / 1000);
+        $("t_status").textContent = done + " / " + total + " answers · about " + Math.floor(eta / 60) + "m " + (eta % 60) + "s left";
+      }
+    }
+    $("t_status").textContent = "Done: " + done + " answers. Mark them ✓ / ✗, then check Results.";
+  } catch (e) {
+    $("t_status").textContent = "Stopped after " + done + " / " + total + " answers.";
+  } finally {
+    state.testAbort = null; $("t_run").disabled = false; $("t_stop").hidden = true;
+  }
+}
+function addMarks(c, model, p, res) {
+  const box = document.createElement("div"); box.className = "marks";
+  for (const [v, label, score] of [["good", "✓", 5], ["bad", "✗", 1]]) {
+    const b = document.createElement("button"); b.dataset.v = v; b.textContent = label; b.setAttribute("aria-pressed", "false");
+    b.title = v === "good" ? "Correct / good answer" : "Wrong / bad answer";
+    b.onclick = async () => {
+      try {
+        await api("/api/rate", { mode: "chat", source: "test_set", model, prompt_id: p.id, category: p.category,
+          prompt: p.prompt, reference: p.reference || null, response: res.text, scores: { correctness: score },
+          params: params(), stats: res.stats });
+        box.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+      } catch (e) { b.title = "Could not save: " + e.message; }
+    };
+    box.appendChild(b);
+  }
+  c.appendChild(box);
+}
+$("t_run").onclick = runTestSet;
+$("t_stop").onclick = () => state.testAbort && state.testAbort.abort();
+
 /* ================= RESULTS ================= */
 const pct = (x) => x === null || x === undefined ? "–" : Math.round(100 * x) + "%";
 function cell(tag, text, cls) { const c = document.createElement(tag); c.textContent = text; if (cls) c.className = cls; return c; }
@@ -612,6 +713,7 @@ $("r_refresh").onclick = loadResults;
     const cats = [...new Set(prompts.map((p) => p.category))];
     $("c_cat").innerHTML = '<option value="">All categories</option>' + cats.map((c) => `<option value="${c}">${c}</option>`).join("");
     fillPromptSelect(); updateProgress();
+    $("t_cat").innerHTML = $("c_cat").innerHTML; renderModelChecks();
   } catch (e) {
     showMsg("fatal", "Cannot reach the evaluation server: " + e.message + ". Start it with: python -m inference.server --config configs/inference/eval_server.yaml", true);
     $("status").textContent = "offline";

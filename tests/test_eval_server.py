@@ -74,7 +74,7 @@ def _post(url, body):
 
 def test_server_endpoints(server):
     html = urllib.request.urlopen(server + "/").read().decode("utf-8")
-    assert "Blind compare" in html
+    assert "Blind compare" in html and "Run test set" in html
     cfg = json.load(urllib.request.urlopen(server + "/api/config"))
     assert cfg["models"][0]["name"] == "echo" and "correctness" in cfg["criteria"]
     assert json.load(urllib.request.urlopen(server + "/api/prompts"))[0]["id"] == "p1"
