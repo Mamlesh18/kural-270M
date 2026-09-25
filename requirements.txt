@@ -1,0 +1,26 @@
+# Core
+torch>=2.3
+transformers>=4.53,<5
+datasets>=3.0
+accelerate>=1.0
+tokenizers>=0.21
+sentencepiece>=0.2
+protobuf>=4.25
+safetensors>=0.4
+huggingface_hub>=0.30
+
+# Config / utils
+omegaconf>=2.3
+pyyaml>=6.0
+numpy>=1.26
+xxhash>=3.4
+regex>=2024.0
+
+# Tracking
+wandb>=0.17
+
+# Optional (install as needed)
+# bitsandbytes>=0.43      # 4/8-bit GPU quantization
+# torchao>=0.8            # weight-only int8/int4 quantization
+# fasttext-wheel>=0.9.2   # optional fastText language-id confirmation
+# pytest>=8               # tests
