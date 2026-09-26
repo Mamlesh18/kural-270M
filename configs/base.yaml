@@ -1,0 +1,28 @@
+# Shared settings inherited by every config (via `defaults:`).
+# All locations derive from `paths.workspace`, which comes from the KURAL_WORKSPACE
+# environment variable (default ./workspace relative to the current directory).
+seed: 1234
+
+paths:
+  workspace: ${oc.env:KURAL_WORKSPACE,./workspace}
+  raw: ${paths.workspace}/raw
+  processed: ${paths.workspace}/processed
+  tokenizers: ${paths.workspace}/tokenizers
+  packed: ${paths.workspace}/packed
+  checkpoints: ${paths.workspace}/checkpoints
+  reports: ${paths.workspace}/reports
+  exports: ${paths.workspace}/exports
+
+base_model:
+  # google/gemma-3-270m is gated (accept the license, then set HF_TOKEN). Any Gemma 3
+  # text checkpoint with the same tokenizer works, e.g. KURAL_BASE_MODEL=unsloth/gemma-3-270m.
+  name_or_path: ${oc.env:KURAL_BASE_MODEL,google/gemma-3-270m}
+  revision: null
+
+wandb:
+  enabled: true
+  project: ${oc.env:WANDB_PROJECT,kural-270m}
+  entity: ${oc.env:WANDB_ENTITY,null}
+  mode: ${oc.env:WANDB_MODE,online}     # online | offline | disabled
+  group: null
+  tags: []

@@ -1,0 +1,47 @@
+# LoRA SFT on Tamil instruction data — the recommended laptop recipe.
+# Only ~3.8M adapter parameters train; base weights stay frozen (low RAM).
+# Run:  python -m training.finetune --config configs/finetune/lora_sft_cpu.yaml
+defaults:
+  - defaults.yaml
+
+run_name: lora-sft-tamil
+finetune:
+  method: lora
+sft:
+  sources:
+    - name: tamil_alpaca_orca
+      type: hf
+      path: abhinand/tamil-alpaca-orca
+      split: train
+      streaming: false
+      format: alpaca
+      shuffle_seed: 1
+      max_docs: 400
+    - name: aya_tamil
+      type: hf
+      path: CohereForAI/aya_dataset
+      split: train
+      streaming: false
+      format: prompt_response
+      fields: {prompt: inputs, response: targets}
+      filter: {field: language, equals: Tamil}
+      shuffle_seed: 2
+      max_docs: 200
+    - name: tamil_squad
+      type: hf
+      path: RajeevanL/tamil_squad-2.0
+      split: train
+      streaming: false
+      format: qa
+      fields: {context: Context, question: Question, answer: Answer}
+      strip_prefixes: ["சூழல்:"]
+      unanswerable_response: null
+      shuffle_seed: 3
+      max_docs: 150
+    - name: sample_sft
+      type: jsonl
+      path: ${repo_root:}/data/samples/sft_sample.jsonl
+      format: alpaca
+train:
+  args:
+    learning_rate: 2.0e-4

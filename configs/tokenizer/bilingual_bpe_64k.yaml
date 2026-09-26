@@ -1,0 +1,27 @@
+# Balanced Tamil + English (+ Tanglish) vocabulary, intended for `replace`: it becomes the
+# model's entire vocabulary, so English and code must be covered well.
+# Run:  python -m tokenizer.train_tokenizer --config configs/tokenizer/bilingual_bpe_64k.yaml
+defaults:
+  - ../base.yaml
+  - common.yaml
+
+tokenizer:
+  name: bilingual_bpe_64k
+  output_dir: ${paths.tokenizers}/${tokenizer.name}
+  processed_dir: ${paths.processed}/full
+  vocab_size: 64000
+  train_extremely_large_corpus: true
+  sample:
+    total_chars: 4e9
+    category_weights:
+      ta_web: 0.35
+      ta_translated: 0.01
+      ta_wiki: 0.07
+      ta_news: 0.05
+      ta_literature: 0.03
+      ta_spoken: 0.03
+      ta_spoken_synthetic: 0.02
+      code_mixed: 0.04
+      tanglish: 0.04
+      tanglish_synthetic: 0.02
+      en: 0.34

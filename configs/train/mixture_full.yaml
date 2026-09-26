@@ -1,0 +1,35 @@
+# Token-share mixture for full continued pretraining (shares of TRAINING TOKENS).
+# Categories with no data are dropped and the rest renormalized (logged + in manifest.json).
+# English replay (~17%) guards against catastrophic forgetting of English.
+data:
+  processed_dir: ${paths.processed}/full
+  mixture:
+    ta_web: 0.44
+    ta_wiki: 0.08
+    ta_translated: 0.01          # Tamil SQuAD passages (translated Wikipedia; small)
+    ta_news: 0.07
+    ta_literature: 0.05
+    ta_spoken: 0.05
+    ta_spoken_synthetic: 0.02
+    tanglish: 0.05
+    tanglish_synthetic: 0.03
+    code_mixed: 0.03
+    en: 0.17
+  max_epochs: 4.0
+  max_epochs_per_category:
+    ta_wiki: 3.0
+    ta_translated: 2.0
+    ta_spoken_synthetic: 1.0     # synthetic data: never repeat
+    tanglish_synthetic: 1.0
+    en: 1.0
+  eval_sets:
+    ta: [ta_web, ta_wiki, ta_news, ta_literature, ta_translated]
+    ta_spoken: [ta_spoken]
+    tanglish: [tanglish, code_mixed]
+    en: [en]
+  eval_max_blocks: 1000
+  add_bos: true
+  add_eos: true
+  num_proc: 16
+  auto_prepare: true
+  overwrite_packed: false

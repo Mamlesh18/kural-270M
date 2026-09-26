@@ -1,0 +1,27 @@
+# Tamil-heavy BPE, intended as the source of new pieces for `extend` (see extend_gemma.yaml).
+# Run:  python -m tokenizer.train_tokenizer --config configs/tokenizer/tamil_bpe_32k.yaml
+defaults:
+  - ../base.yaml
+  - common.yaml
+
+tokenizer:
+  name: tamil_bpe_32k
+  output_dir: ${paths.tokenizers}/${tokenizer.name}
+  processed_dir: ${paths.processed}/full
+  vocab_size: 32000
+  train_extremely_large_corpus: true
+  sample:
+    total_chars: 3e9
+    # Share of sampled characters. Missing categories are skipped (and renormalized).
+    category_weights:
+      ta_web: 0.49
+      ta_translated: 0.01
+      ta_wiki: 0.10
+      ta_news: 0.08
+      ta_literature: 0.05
+      ta_spoken: 0.05
+      ta_spoken_synthetic: 0.03
+      code_mixed: 0.05
+      tanglish: 0.04
+      tanglish_synthetic: 0.03
+      en: 0.07

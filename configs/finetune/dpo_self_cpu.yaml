@@ -1,0 +1,31 @@
+# DPO with SPIN-style pairs: chosen = the dataset's Tamil answer, rejected = what the
+# starting model answers itself (generated once, cached). LoRA adapter → the reference
+# model is free (adapter switched off).
+# Run:  python -m training.finetune --config configs/finetune/dpo_self_cpu.yaml
+defaults:
+  - defaults.yaml
+
+run_name: dpo-self-tamil
+finetune:
+  method: dpo
+  adapter: lora
+preference:
+  beta: 0.1
+  sources:
+    - name: self_tamil_alpaca
+      format: self_generated
+      sft_format: alpaca
+      type: hf
+      path: abhinand/tamil-alpaca
+      split: train
+      streaming: false
+      shuffle_seed: 5
+      max_docs: 60
+    - name: ui_ratings           # plus any blind-comparison votes from the chatbot UI
+      format: ratings
+      path: ${paths.reports}/human_eval/ratings.jsonl
+train:
+  args:
+    learning_rate: 5.0e-5
+    per_device_train_batch_size: 1
+    gradient_accumulation_steps: 8

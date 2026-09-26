@@ -1,0 +1,28 @@
+# Testing UI for the CPU-trained Kural model vs the Gemma baselines.
+# Run:  python -m inference.server --config configs/inference/eval_server_cpu.yaml
+#       then open http://127.0.0.1:7860
+defaults:
+  - eval_server.yaml
+
+server:
+  title: "Kural 270M (CPU SFT) — Tamil chatbot testing"
+  ratings_file: ${paths.reports}/human_eval/ratings_cpu.jsonl
+  generation:
+    max_new_tokens: 200
+  models:
+    - name: kural-270m-cpu-sft
+      path: ${paths.checkpoints}/kural-270m-cpu-sft/final
+      chat: true
+      description: "Kural: Gemma 3 270M-it + Tamil instruction tuning (CPU run)"
+    - name: kural-270m-cpu-sft-int8
+      path: ${paths.exports}/kural-270m-cpu-sft/dynamic_int8
+      chat: true
+      description: "Same model, dynamic int8 quantized (CPU)"
+    - name: gemma3-270m-it
+      path: unsloth/gemma-3-270m-it
+      chat: true
+      description: "Baseline: Google's instruction-tuned Gemma 3 270M (before Tamil tuning)"
+    - name: gemma3-270m-base
+      path: unsloth/gemma-3-270m
+      chat: false
+      description: "Baseline: Gemma 3 270M base (text completion)"

@@ -1,0 +1,16 @@
+# Settings shared by all SentencePiece tokenizer configs (Gemma-compatible conventions).
+tokenizer:
+  model_type: bpe                 # bpe is required for `extend` (merge closure); unigram ok for `replace`
+  character_coverage: 0.99995
+  byte_fallback: true
+  split_digits: true
+  max_sentence_length: 16384
+  input_sentence_size: 10000000
+  seed_sentencepiece_size: 1000000
+  num_threads: 8
+  model_max_length: 32768
+  # Gemma chat markers + line-break pieces (runs of spaces are learned via allow_whitespace_only_pieces).
+  user_defined_symbols: ["<start_of_turn>", "<end_of_turn>", "<mask>", "\n", "\n\n", "\t"]
+  keep_sample: false
+  sample:
+    max_line_chars: 4096

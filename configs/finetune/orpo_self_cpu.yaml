@@ -1,0 +1,12 @@
+# ORPO: SFT on the chosen answer + odds-ratio preference term. No reference model.
+defaults:
+  - dpo_self_cpu.yaml
+
+run_name: orpo-self-tamil
+finetune:
+  method: orpo
+preference:
+  orpo_lambda: 0.1
+train:
+  args:
+    learning_rate: 1.0e-4

@@ -1,0 +1,16 @@
+{"instruction": "தமிழ்நாட்டின் தலைநகரம் எது?", "input": "", "output": "தமிழ்நாட்டின் தலைநகரம் சென்னை."}
+{"instruction": "திருக்குறளை எழுதியவர் யார்?", "input": "", "output": "திருக்குறளை எழுதியவர் திருவள்ளுவர். இது 1330 குறள்களைக் கொண்ட அறநூல்."}
+{"instruction": "கீழே உள்ள வாக்கியத்தை ஆங்கிலத்தில் மொழிபெயர்க்கவும்.", "input": "நான் தினமும் காலையில் நடைப்பயிற்சி செய்கிறேன்.", "output": "I go for a walk every morning."}
+{"instruction": "Translate the following sentence into Tamil.", "input": "The weather is very pleasant today.", "output": "இன்று வானிலை மிகவும் இனிமையாக உள்ளது."}
+{"instruction": "ஆரோக்கியமாக இருக்க மூன்று வழிகளைக் கூறுங்கள்.", "input": "", "output": "1. தினமும் உடற்பயிற்சி செய்யுங்கள்.\n2. சத்தான உணவுகளை உண்ணுங்கள்.\n3. போதுமான அளவு தூங்குங்கள்."}
+{"instruction": "ஒரு வருடத்தில் எத்தனை மாதங்கள் உள்ளன?", "input": "", "output": "ஒரு வருடத்தில் பன்னிரண்டு மாதங்கள் உள்ளன."}
+{"instruction": "Naan romba tired ah iruken, enna pannalam?", "input": "", "output": "Konjam rest edunga, thanni kudinga, mudinja oru chinna nap podunga. Romba naal ah tired ah irundha doctor ah paakradhu nalladhu."}
+{"instruction": "இந்த வாக்கியத்தை பேச்சுத் தமிழில் மாற்றி எழுதவும்.", "input": "நான் நாளை சென்னைக்குப் போகிறேன்.", "output": "நான் நாளைக்கு சென்னைக்கு போறேன்."}
+{"instruction": "தண்ணீரின் கொதிநிலை என்ன?", "input": "", "output": "கடல் மட்டத்தில் தண்ணீர் 100 டிகிரி செல்சியஸில் கொதிக்கும்."}
+{"instruction": "What is the capital of India?", "input": "", "output": "The capital of India is New Delhi."}
+{"instruction": "'அறம்' என்ற சொல்லின் பொருள் என்ன?", "input": "", "output": "'அறம்' என்பது நற்செயல், நீதி, கடமை ஆகியவற்றைக் குறிக்கும் சொல்."}
+{"instruction": "Tamil la 'thank you' eppadi solradhu?", "input": "", "output": "Tamil la 'thank you' ku 'நன்றி' (nandri) nu solluvom."}
+{"instruction": "ஒரு சிறிய கவிதை எழுதவும்: மழை", "input": "", "output": "வானம் அழுதது,\nமண் சிரித்தது,\nமரங்கள் நனைந்து\nமகிழ்ந்து ஆடின."}
+{"instruction": "5 மற்றும் 7 ஐக் கூட்டினால் என்ன கிடைக்கும்?", "input": "", "output": "5 மற்றும் 7 ஐக் கூட்டினால் 12 கிடைக்கும்."}
+{"instruction": "உலகின் மிகப்பெரிய கடல் எது?", "input": "", "output": "உலகின் மிகப்பெரிய கடல் பசிபிக் பெருங்கடல்."}
+{"instruction": "Summarize in one sentence.", "input": "தமிழ் உலகின் பழமையான மொழிகளில் ஒன்று. இதற்கு இரண்டாயிரம் ஆண்டுகளுக்கும் மேலான இலக்கிய வரலாறு உண்டு.", "output": "தமிழ் இரண்டாயிரம் ஆண்டுகளுக்கு மேலான இலக்கிய வரலாறு கொண்ட பழமையான மொழி."}
