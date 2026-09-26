@@ -1,0 +1,7 @@
+# DoRA (weight-decomposed LoRA): LoRA + learned magnitude vector; ~25% slower than LoRA.
+defaults:
+  - lora_sft_cpu.yaml
+
+run_name: dora-sft-tamil
+finetune:
+  method: dora

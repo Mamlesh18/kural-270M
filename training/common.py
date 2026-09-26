@@ -13,6 +13,7 @@ from transformers.trainer_utils import get_last_checkpoint
 
 from common.config import to_container
 from common.utils import get_logger, resolve_precision
+from training.losses import label_only_loss  # noqa: F401  (re-exported)
 
 log = get_logger(__name__)
 
@@ -78,27 +79,6 @@ def resolve_resume(setting: Any, output_dir: str) -> str | bool | None:
     return str(setting)
 
 
-def label_only_loss(model, input_ids, attention_mask, labels, num_items_in_batch=None):
-    """Causal-LM loss that runs the output projection only where ``labels != -100``.
-
-    Gemma 3 270M's 262k-row output layer costs more than the whole transformer, so for
-    SFT (loss on assistant tokens only, typically 30–50% of positions) skipping the
-    masked positions roughly halves the output-layer cost. Mathematically identical to
-    the standard loss.
-    """
-    core = model.module if hasattr(model, "module") else model
-    hidden = core.model(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
-    targets = labels[:, 1:]
-    keep = targets != -100
-    logits = core.lm_head(hidden[:, :-1][keep]).float()
-    cap = getattr(core.config, "final_logit_softcapping", None)
-    if cap:
-        logits = torch.tanh(logits / cap) * cap
-    loss = torch.nn.functional.cross_entropy(logits, targets[keep], reduction="sum")
-    denom = num_items_in_batch if num_items_in_batch is not None else keep.sum()
-    return loss / torch.as_tensor(denom, device=loss.device).clamp(min=1)
-
-
 class KuralTrainer(Trainer):
     """Adds perplexity for every ``*_loss`` eval metric and a running token count.
 
@@ -109,6 +89,12 @@ class KuralTrainer(Trainer):
         super().__init__(*args, **kwargs)
         self.tokens_per_step = tokens_per_step
         self.label_only_logits = label_only_logits
+        self._extra: dict[str, list[float]] = {}
+
+    def record(self, **metrics: float) -> None:
+        """Queue extra training metrics (e.g. DPO reward margins); averaged into the next log line."""
+        for k, v in metrics.items():
+            self._extra.setdefault(k, []).append(float(v))
 
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
         if not self.label_only_logits or return_outputs:
@@ -117,11 +103,24 @@ class KuralTrainer(Trainer):
         return label_only_loss(model, inputs["input_ids"], inputs.get("attention_mask"), inputs["labels"],
                                num_items_in_batch)
 
+    def prediction_step(self, model, inputs, prediction_loss_only, ignore_keys=None):
+        if not self.label_only_logits:
+            return super().prediction_step(model, inputs, prediction_loss_only, ignore_keys)
+        # The default evaluation materializes (and keeps) full-vocabulary logits for every token —
+        # ~3 GB extra for Gemma's 262k vocab. Only the loss is needed.
+        inputs = self._prepare_inputs(inputs)
+        with torch.no_grad():
+            loss = label_only_loss(model, inputs["input_ids"], inputs.get("attention_mask"), inputs["labels"])
+        return loss.detach(), None, None
+
     def log(self, logs: dict[str, float], *args, **kwargs) -> None:
         for key in list(logs):
             if key.endswith("_loss") and key.startswith("eval"):
                 val = logs[key]
                 logs[key[:-5] + "_ppl"] = math.exp(val) if val < 50 else float("inf")
+        if "loss" in logs and self._extra:
+            logs.update({k: sum(v) / len(v) for k, v in self._extra.items()})
+            self._extra = {}
         if "loss" in logs and self.tokens_per_step:
             logs["tokens_seen"] = float(self.state.global_step * self.tokens_per_step)
         if self.is_world_process_zero():

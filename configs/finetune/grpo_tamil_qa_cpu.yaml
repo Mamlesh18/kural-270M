@@ -1,0 +1,38 @@
+# GRPO (RL with rule-based rewards) on Tamil QA: rewards overlap with the reference answer,
+# answering Tamil questions in Tamil script, and no repetition. LoRA adapter; KL to the
+# starting model is free. Generation dominates the cost — keep steps small on CPU.
+# Run:  python -m training.finetune --config configs/finetune/grpo_tamil_qa_cpu.yaml
+defaults:
+  - defaults.yaml
+
+run_name: grpo-tamil-qa
+finetune:
+  method: grpo
+  adapter: lora
+grpo:
+  num_generations: 4
+  max_new_tokens: 48
+  sources:
+    - name: chat_eval_prompts
+      type: jsonl
+      path: ${repo_root:}/evaluation/resources/chat_eval_prompts.jsonl
+      format: prompt_response
+      fields: {prompt: prompt, response: reference}
+    - name: tamil_squad
+      type: hf
+      path: RajeevanL/tamil_squad-2.0
+      split: train
+      streaming: false
+      format: qa
+      fields: {context: Context, question: Question, answer: Answer}
+      strip_prefixes: ["சூழல்:"]
+      unanswerable_response: null
+      shuffle_seed: 7
+      max_docs: 100
+train:
+  args:
+    max_steps: 30
+    per_device_train_batch_size: 2     # prompts per optimizer step
+    learning_rate: 1.0e-5
+    logging_steps: 1
+    save_steps: 10
