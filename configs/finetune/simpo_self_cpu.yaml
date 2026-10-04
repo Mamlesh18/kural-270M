@@ -1,0 +1,13 @@
+# SimPO: length-normalized preference margin, no reference model.
+defaults:
+  - dpo_self_cpu.yaml
+
+run_name: simpo-self-tamil
+finetune:
+  method: simpo
+preference:
+  beta: 2.0
+  simpo_gamma: 0.5
+train:
+  args:
+    learning_rate: 5.0e-5

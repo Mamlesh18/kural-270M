@@ -1,0 +1,109 @@
+# SFT of the continued-pretrained Kural 270M on Tamil instruction / chat data.
+# Verify each dataset's license before enabling it.
+# Run:  python -m training.sft --config configs/sft/sft_270m.yaml
+defaults:
+  - ../base.yaml
+
+run_name: kural-270m-sft
+
+model:
+  source: checkpoint
+  path: ${paths.checkpoints}/kural-270m-stage2-full/final
+  load_dtype: fp32
+  attn_implementation: sdpa
+
+wandb:
+  group: sft-270m
+  tags: [sft, 270m]
+
+sft:
+  max_seq_len: 2048
+  truncation: drop             # drop | truncate
+  eval_fraction: 0.02
+  repeat: 1
+  system_prompt: null
+  normalize:
+    urls: keep
+    emails: keep
+    phones: keep
+  sources:
+    - name: tamil_alpaca             # 51,876 rows (GPL-3.0)
+      type: hf
+      path: abhinand/tamil-alpaca
+      split: train
+      streaming: false
+      format: alpaca
+    - name: tamil_alpaca_orca        # 145,181 rows (GPL-3.0): includes all tamil_alpaca rows plus
+      type: hf                       # ~93k Orca-style (FLAN / CoT / T0 / NIv2) rows; the exact
+      path: abhinand/tamil-alpaca-orca   # duplicates are dropped by SFT dedup
+      split: train
+      streaming: false
+      format: alpaca
+    - name: tamil_squad              # 66,277 reading-comprehension QA pairs (SQuAD 2.0, Tamil)
+      type: hf
+      path: RajeevanL/tamil_squad-2.0
+      split: train                   # validation / test splits are left untouched for evaluation
+      streaming: false
+      format: qa
+      fields: {context: Context, question: Question, answer: Answer}
+      strip_prefixes: ["சூழல்:"]
+      # 339 rows have no answer: 180 also have no passage, and the other ~120 look like
+      # translation failures rather than real SQuAD 2.0 "unanswerable" items (0.5% vs ~33% in
+      # the English original), so they are dropped. To train "not in the passage" answers
+      # instead, set e.g. "இந்தப் பத்தியில் இந்தக் கேள்விக்கான பதில் இல்லை."
+      unanswerable_response: null
+    - name: aya_tamil
+      type: hf
+      path: CohereForAI/aya_dataset
+      split: train
+      streaming: false
+      format: prompt_response
+      fields: {prompt: inputs, response: targets}
+      filter: {field: language, equals: Tamil}
+    - name: local_chat               # your own conversations: {"messages": [{role, content}, ...]}
+      type: jsonl
+      path: ${paths.raw}/sft/*.jsonl
+      format: messages
+      enabled: false
+    - name: english_replay           # small English instruction replay keeps English chat ability
+      type: hf
+      path: yahma/alpaca-cleaned
+      split: train
+      streaming: false
+      format: alpaca
+      max_docs: 10000
+
+train:
+  output_dir: ${paths.checkpoints}/${run_name}
+  resume: auto
+  precision: auto
+  trainable: all
+  args:
+    num_train_epochs: 3
+    per_device_train_batch_size: 16
+    per_device_eval_batch_size: 16
+    gradient_accumulation_steps: 2
+    learning_rate: 5.0e-5
+    lr_scheduler_type: cosine
+    warmup_ratio: 0.03
+    weight_decay: 0.0
+    max_grad_norm: 1.0
+    optim: adamw_torch_fused
+    neftune_noise_alpha: 5
+    group_by_length: true
+    logging_steps: 10
+    eval_strategy: steps
+    eval_steps: 500
+    save_strategy: steps
+    save_steps: 500
+    save_total_limit: 3
+    dataloader_num_workers: 2
+    remove_unused_columns: false
+
+sample_generation:
+  max_new_tokens: 96
+  prompts:
+    - "தமிழ்நாட்டின் தலைநகரம் எது?"
+    - "திருக்குறளின் சிறப்பு என்ன?"
+    - "Naan romba tired ah iruken, enna pannalam?"
+    - "Explain photosynthesis in simple Tamil."

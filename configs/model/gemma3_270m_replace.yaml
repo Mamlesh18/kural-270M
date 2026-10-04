@@ -1,0 +1,14 @@
+# Gemma 3 270M transformer with its 262k vocabulary REPLACED by a 64k Tamil+English BPE.
+# Gemma 3 270M is ~170M embedding + ~100M transformer parameters; a 64k vocab shrinks the
+# model to ~140M total and frees capacity/compute for the transformer. Every row is
+# initialized from Gemma embeddings (exact-piece copy, else mean of Gemma sub-tokens).
+# Expect a larger initial loss than `extend` and a longer embedding warm-up.
+model:
+  source: pretrained
+  load_dtype: fp32
+  attn_implementation: sdpa
+  pad_vocab_to_multiple_of: 64
+
+tokenizer:
+  adaptation: replace
+  path: ${paths.tokenizers}/bilingual_bpe_64k

@@ -1,0 +1,41 @@
+# Chatbot evaluation UI (chat, blind A/B comparison, results).
+# Run:  python -m inference.server --config configs/inference/eval_server.yaml
+#       then open http://127.0.0.1:7860
+defaults:
+  - ../base.yaml
+
+server:
+  title: "Kural 270M — Tamil chatbot evaluation"
+  host: 127.0.0.1            # no authentication: keep it on localhost
+  port: 7860
+  device: null               # null → cuda if available, else cpu
+  dtype: auto                # bf16 on capable GPUs, fp32 otherwise
+  max_context: 2048          # prompt tokens kept (left-truncated)
+  ratings_file: ${paths.reports}/human_eval/ratings.jsonl
+  prompts_file: ${repo_root:}/evaluation/resources/chat_eval_prompts.jsonl
+  preload: []                # model names to load at startup (others load on first use)
+  generation:                # defaults; adjustable in the UI
+    max_new_tokens: 256
+    temperature: 0.7
+    top_p: 0.9
+    top_k: 50
+    repetition_penalty: 1.1
+    do_sample: true
+  # Models that don't exist yet (e.g. before training finishes) show as unavailable.
+  models:
+    - name: kural-270m-sft
+      path: ${paths.checkpoints}/kural-270m-sft/final
+      chat: true
+      description: "Kural: Tamil CPT + SFT"
+    - name: kural-270m-cpt
+      path: ${paths.checkpoints}/kural-270m-stage2-full/final
+      chat: false
+      description: "Kural after continued pretraining (no SFT; text completion)"
+    - name: gemma3-270m-it
+      path: unsloth/gemma-3-270m-it   # ungated mirror of google/gemma-3-270m-it
+      chat: true
+      description: "Baseline: Google's instruction-tuned Gemma 3 270M"
+    - name: gemma3-270m-base
+      path: ${base_model.name_or_path}
+      chat: false
+      description: "Baseline: Gemma 3 270M base (text completion)"

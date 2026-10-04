@@ -1,0 +1,15 @@
+defaults:
+  - quantize.yaml
+
+quantize:
+  model_path: ${paths.checkpoints}/exp10m-sft/final
+  output_dir: ${paths.exports}/exp10m-sft
+  methods: [dynamic_int8]
+  max_length: 256
+  stride: 128
+  eval_texts:
+    processed_dir: ${paths.processed}/smoke
+    max_docs: 50
+    sets:
+      ta: [ta_wiki]
+      en: [en]

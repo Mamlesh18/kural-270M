@@ -1,0 +1,21 @@
+# Stage 1: train only the (tied) embedding matrix so the new Tamil rows settle before the
+# transformer weights are touched — limits early damage to Gemma's existing abilities.
+#   torchrun --nproc_per_node <gpus> -m training.pretrain --config configs/train/cpt_270m_stage1_embeddings.yaml
+defaults:
+  - cpt_270m.yaml
+
+run_name: kural-270m-stage1-embed
+
+wandb:
+  tags: [cpt, 270m, extend, stage1]
+
+train:
+  trainable: embeddings
+  args:
+    num_train_epochs: 1
+    max_steps: 1000             # ≈1B tokens at 1M tokens/step
+    learning_rate: 1.0e-3
+    warmup_ratio: 0.05
+    weight_decay: 0.0
+    eval_steps: 250
+    save_steps: 250

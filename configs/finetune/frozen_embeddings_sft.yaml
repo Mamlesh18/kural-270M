@@ -1,0 +1,7 @@
+# Full fine-tuning except the 168M tied embedding matrix (100M trainable).
+defaults:
+  - full_sft.yaml
+
+run_name: frozen-emb-sft-tamil
+finetune:
+  method: frozen_embeddings

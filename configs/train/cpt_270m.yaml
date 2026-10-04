@@ -1,0 +1,64 @@
+# Full continued pretraining of Gemma 3 270M on the Tamil mixture (single stage).
+# For the recommended two-stage schedule use cpt_270m_stage1_embeddings.yaml, then
+# cpt_270m_stage2_full.yaml.
+#
+#   torchrun --nproc_per_node <gpus> -m training.pretrain --config configs/train/cpt_270m.yaml
+#
+# Effective batch = per_device × accum × gpus × seq_len
+#                 = 16 × 4 × 8 × 2048 ≈ 1.05M tokens/step on 8 GPUs (≈131k on 1 GPU).
+defaults:
+  - ../base.yaml
+  - ../model/gemma3_270m_extend.yaml
+  - mixture_full.yaml
+
+run_name: kural-270m-cpt
+
+wandb:
+  group: cpt-270m
+  tags: [cpt, 270m, extend]
+
+data:
+  packed_dir: ${paths.packed}/cpt_full_gemma3ext_seq2048
+  seq_len: 2048
+  token_budget: 1.0e10          # null → largest budget allowed by max_epochs
+
+train:
+  output_dir: ${paths.checkpoints}/${run_name}
+  resume: auto
+  precision: auto               # bf16 on Ampere+ GPUs
+  trainable: all
+  args:
+    num_train_epochs: 1         # one pass over the packed mixture (= token_budget)
+    per_device_train_batch_size: 16
+    per_device_eval_batch_size: 16
+    gradient_accumulation_steps: 4
+    learning_rate: 2.0e-4
+    lr_scheduler_type: cosine_with_min_lr
+    lr_scheduler_kwargs: {min_lr_rate: 0.1}
+    warmup_ratio: 0.01
+    weight_decay: 0.1
+    adam_beta1: 0.9
+    adam_beta2: 0.95
+    adam_epsilon: 1.0e-8
+    max_grad_norm: 1.0
+    optim: adamw_torch_fused
+    logging_steps: 10
+    eval_strategy: steps
+    eval_steps: 1000
+    save_strategy: steps
+    save_steps: 1000
+    save_total_limit: 5
+    gradient_checkpointing: false
+    torch_compile: false
+    dataloader_num_workers: 4
+    ddp_find_unused_parameters: false
+    remove_unused_columns: false
+
+sample_generation:
+  max_new_tokens: 48
+  prompts:
+    - "தமிழ்நாட்டின் தலைநகரம்"
+    - "திருக்குறள் என்பது"
+    - "நேத்து நான் மார்க்கெட்டுக்கு போனப்போ"
+    - "Machan, inniki evening"
+    - "The theory of relativity states that"

@@ -1,0 +1,24 @@
+# Small tokenizer trained on the smoke corpus (used by the 10M experimental model).
+# Run:  python -m tokenizer.train_tokenizer --config configs/tokenizer/tamil_bpe_smoke.yaml
+defaults:
+  - ../base.yaml
+  - common.yaml
+
+tokenizer:
+  name: tamil_bpe_smoke_16k
+  output_dir: ${paths.tokenizers}/${tokenizer.name}
+  processed_dir: ${paths.processed}/smoke
+  vocab_size: 16000
+  input_sentence_size: 2000000
+  seed_sentencepiece_size: 300000
+  num_threads: 4
+  sample:
+    total_chars: 3e7
+    category_weights:
+      ta_wiki: 0.60
+      code_mixed: 0.03
+      ta_spoken: 0.01
+      ta_spoken_synthetic: 0.04
+      tanglish: 0.01
+      tanglish_synthetic: 0.06
+      en: 0.25

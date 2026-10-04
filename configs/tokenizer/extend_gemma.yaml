@@ -1,0 +1,17 @@
+# Extend the Gemma 3 tokenizer with pieces from the Tamil BPE (see tokenizer/adapt.py).
+# Run:  python -m tokenizer.adapt --config configs/tokenizer/extend_gemma.yaml
+defaults:
+  - ../base.yaml
+
+adapt:
+  base_tokenizer: null                      # null → base_model.name_or_path
+  tamil_tokenizer_dir: ${paths.tokenizers}/tamil_bpe_32k
+  output_dir: ${paths.tokenizers}/gemma3_tamil_extended
+  reuse_unused: true                        # fill Gemma's ~6.2k <unusedN> slots first (no new params)
+  max_new_tokens: null                      # null → every Tamil-only piece not already in Gemma
+  min_piece_chars: 1
+  score_policy: tamil_first                 # tamil_first | append
+  model_max_length: 32768
+  processed_dir: ${paths.processed}/full
+  report_categories: [ta_web, ta_wiki, ta_spoken, code_mixed, tanglish, en]
+  report_docs_per_category: 500

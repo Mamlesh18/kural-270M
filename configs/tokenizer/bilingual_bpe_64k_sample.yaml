@@ -1,0 +1,11 @@
+# 64k bilingual BPE on the sample corpus (for sizing the `replace` strategy).
+defaults:
+  - bilingual_bpe_64k.yaml
+
+tokenizer:
+  name: bilingual_bpe_64k_sample
+  processed_dir: ${paths.processed}/sample
+  train_extremely_large_corpus: false
+  input_sentence_size: 3000000
+  sample:
+    total_chars: 3e8

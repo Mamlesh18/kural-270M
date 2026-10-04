@@ -1,0 +1,58 @@
+# Automatic before/after evaluation of the CPU SFT run (≈20-30 min on CPU).
+# Run:  python -m evaluation.run_eval --config configs/eval/eval_cpu.yaml
+defaults:
+  - ../base.yaml
+  - benchmarks.yaml
+
+run_name: kural-270m-cpu-sft
+
+eval:
+  output_dir: ${paths.reports}/eval_cpu
+  texts:
+    processed_dir: ${paths.processed}/sample
+    split: eval
+    max_docs: 60
+    max_chars: 2000
+    sets:
+      ta: [ta_web, ta_wiki]
+      en: [en]
+  tokenizers:
+    enabled: false
+  models:
+    - {name: gemma3-270m-it, path: "unsloth/gemma-3-270m-it", chat: true, dtype: fp32}
+    - {name: kural-270m-cpu-sft, path: "${paths.checkpoints}/kural-270m-cpu-sft/final", chat: true, dtype: fp32}
+  perplexity:
+    max_length: 512
+    stride: 256
+  generation:
+    max_new_tokens: 80
+    kwargs: {do_sample: false, repetition_penalty: 1.1}
+    prompts:
+      - "தமிழ்நாட்டின் தலைநகரம் எது?"
+      - "திருக்குறளை எழுதியவர் யார்?"
+      - "ஒளிச்சேர்க்கை என்றால் என்ன? எளிய தமிழில் விளக்குங்கள்."
+      - "Naan romba tired ah iruken, enna pannalam?"
+      - "Translate to Tamil: The weather is very pleasant today."
+      - "What is the capital of France?"
+  # Keep CPU time reasonable: COPA / sentiment are sub-sampled (limit); the cloze set is full.
+  benchmarks:
+    - name: tamil_cloze_sanity
+      type: jsonl
+      path: ${repo_root:}/evaluation/resources/tamil_cloze.jsonl
+      adapter: cloze
+    - name: indic_copa_ta
+      type: hf
+      path: json
+      data_files: hf://datasets/ai4bharat/IndicCOPA/data/test.ta.jsonl
+      split: train
+      streaming: false
+      adapter: copa
+      limit: 200
+    - name: indic_sentiment_ta
+      type: hf
+      path: json
+      data_files: hf://datasets/ai4bharat/IndicSentiment/data/test/ta.json
+      split: train
+      streaming: false
+      adapter: sentiment
+      limit: 200

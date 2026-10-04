@@ -1,0 +1,12 @@
+# Full-size (32k) Tamil BPE trained on the mid-size sample corpus (pipeline_sample.yaml).
+# Same settings as tamil_bpe_32k.yaml; used to size the Gemma vocabulary extension.
+defaults:
+  - tamil_bpe_32k.yaml
+
+tokenizer:
+  name: tamil_bpe_32k_sample
+  processed_dir: ${paths.processed}/sample
+  train_extremely_large_corpus: false
+  input_sentence_size: 3000000
+  sample:
+    total_chars: 3e8     # takes everything available in the sample

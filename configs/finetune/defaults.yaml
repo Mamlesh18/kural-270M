@@ -1,0 +1,96 @@
+# Shared defaults for `python -m training.finetune` (every method). Laptop-safe settings:
+# capped CPU threads, below-normal priority, a RAM check before loading data, small
+# micro-batches with gradient accumulation, and frequent checkpoints (re-running resumes).
+defaults:
+  - ../base.yaml
+
+run_name: ft-${finetune.method}
+
+wandb:
+  enabled: false
+
+finetune:
+  method: lora            # full | frozen_embeddings | lora | dora | qlora | dpo | orpo | simpo | grpo
+  adapter: lora           # weights updated by dpo/orpo/simpo/grpo: lora | dora | full
+  model: ${oc.env:KURAL_CHAT_BASE,unsloth/gemma-3-270m-it}
+  output_dir: ${paths.workspace}/runs/${run_name}
+  gradient_checkpointing: false   # true: ~40% less activation RAM, ~30% slower
+  resources:
+    threads: null                 # null → physical cores − 1 (leaves one core for the desktop)
+    low_priority: true            # below-normal process priority: laptop stays responsive
+    max_ram_fraction: 0.9         # refuse to start if the estimate exceeds 90% of free RAM
+    ignore_ram_check: false
+  lora:
+    r: 16
+    alpha: 32
+    dropout: 0.05
+    target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+    use_rslora: false
+
+# ---- supervised (full / frozen_embeddings / lora / dora / qlora) ----
+sft:
+  max_seq_len: 384
+  truncation: drop
+  eval_fraction: 0.05
+  repeat: 1
+  label_only_logits: true
+  normalize: {urls: keep, emails: keep, phones: keep}
+  sources:
+    - name: sample_sft
+      type: jsonl
+      path: ${repo_root:}/data/samples/sft_sample.jsonl
+      format: alpaca
+
+# ---- preference (dpo / orpo / simpo) ----
+preference:
+  max_seq_len: 384
+  eval_fraction: 0.1
+  beta: 0.1                 # DPO / SimPO strength
+  orpo_lambda: 0.1          # ORPO odds-ratio weight
+  simpo_gamma: 0.5          # SimPO target margin
+  rejected_max_new_tokens: 96
+  sources:
+    - name: ui_ratings
+      format: ratings
+      path: ${paths.reports}/human_eval/ratings.jsonl
+
+# ---- reinforcement learning (grpo) ----
+grpo:
+  num_generations: 4        # completions sampled per prompt (the "group")
+  max_new_tokens: 64
+  max_prompt_tokens: 256
+  temperature: 0.9
+  top_p: 0.95
+  beta_kl: 0.04             # KL penalty to the starting model
+  rewards: {reference_f1: 1.0, contains_answer: 0.5, tamil_script: 0.3, no_repetition: 0.2, length: 0.1}
+  reward_kwargs: {min_words: 1, max_words: 80}
+  sources:
+    - name: chat_eval_prompts
+      type: jsonl
+      path: ${repo_root:}/evaluation/resources/chat_eval_prompts.jsonl
+      format: prompt_response
+      fields: {prompt: prompt, response: reference}
+
+train:
+  resume: auto
+  precision: fp32
+  args:
+    num_train_epochs: 1
+    max_steps: -1
+    per_device_train_batch_size: 2
+    per_device_eval_batch_size: 4
+    gradient_accumulation_steps: 8
+    learning_rate: 2.0e-4
+    lr_scheduler_type: cosine
+    warmup_ratio: 0.05
+    weight_decay: 0.0
+    max_grad_norm: 1.0
+    optim: adamw_torch
+    logging_steps: 1
+    eval_strategy: steps
+    eval_steps: 25
+    save_strategy: steps
+    save_steps: 10
+    save_total_limit: 2
+    dataloader_num_workers: 0
+    remove_unused_columns: false

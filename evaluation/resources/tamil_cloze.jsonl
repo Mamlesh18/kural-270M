@@ -1,0 +1,22 @@
+{"category": "tamil_fact", "context": "தமிழ்நாட்டின் தலைநகரம்", "choices": [" கொல்கத்தா", " சென்னை", " மும்பை", " பெங்களூரு"], "label": 1}
+{"category": "tamil_fact", "context": "திருக்குறளை எழுதியவர்", "choices": [" திருவள்ளுவர்", " கம்பர்", " பாரதியார்", " இளங்கோவடிகள்"], "label": 0}
+{"category": "tamil_fact", "context": "சிலப்பதிகாரத்தை இயற்றியவர்", "choices": [" இளங்கோவடிகள்", " ஔவையார்", " திருவள்ளுவர்", " கம்பர்"], "label": 0}
+{"category": "tamil_fact", "context": "கம்பராமாயணத்தை எழுதியவர்", "choices": [" திருவள்ளுவர்", " கம்பர்", " இளங்கோவடிகள்", " பாரதிதாசன்"], "label": 1}
+{"category": "tamil_fact", "context": "இந்தியாவின் தலைநகரம்", "choices": [" மும்பை", " புது தில்லி", " கொல்கத்தா", " சென்னை"], "label": 1}
+{"category": "tamil_fact", "context": "இந்தியாவின் தேசிய விலங்கு", "choices": [" குதிரை", " யானை", " ஒட்டகம்", " புலி"], "label": 3}
+{"category": "tamil_fact", "context": "தமிழ் மொழியில் உயிர் எழுத்துகள் மொத்தம்", "choices": [" முப்பது", " பன்னிரண்டு", " ஐந்து", " பதினெட்டு"], "label": 1}
+{"category": "tamil_fact", "context": "தமிழ் மொழியில் மெய் எழுத்துகள் மொத்தம்", "choices": [" நூறு", " பன்னிரண்டு", " ஐந்து", " பதினெட்டு"], "label": 3}
+{"category": "world", "context": "ஒரு வாரத்தில் உள்ள நாட்கள்", "choices": [" ஐந்து", " ஏழு", " பத்து", " மூன்று"], "label": 1}
+{"category": "world", "context": "சூரியன் உதிக்கும் திசை", "choices": [" கிழக்கு", " தெற்கு", " மேற்கு", " வடக்கு"], "label": 0}
+{"category": "world", "context": "தண்ணீர் நூறு டிகிரி செல்சியஸில்", "choices": [" கொதிக்கும்", " பேசும்", " பறக்கும்", " உறையும்"], "label": 0}
+{"category": "world", "context": "பசுவின் பாலில் இருந்து தயாரிக்கப்படுவது", "choices": [" தயிர்", " இரும்பு", " கண்ணாடி", " காகிதம்"], "label": 0}
+{"category": "grammar", "context": "நான் நேற்று பள்ளிக்குச்", "choices": [" செல்வேன்.", " செல்கிறாள்.", " சென்றான்.", " சென்றேன்."], "label": 3}
+{"category": "grammar", "context": "அவள் நாளை ஊருக்குச்", "choices": [" செல்கிறோம்.", " சென்றாள்.", " சென்றேன்.", " செல்வாள்."], "label": 3}
+{"category": "grammar", "context": "நாங்கள் இப்போது பாடம்", "choices": [" படித்தீர்கள்.", " படித்தான்.", " படிப்பாள்.", " படிக்கிறோம்."], "label": 3}
+{"category": "spoken", "context": "எனக்கு ரொம்ப பசிக்குது, கொஞ்சம்", "choices": [" பஸ் குடு", " சாப்பாடு குடு", " தூக்கம் குடு"], "label": 1}
+{"category": "spoken", "context": "மழை வருது, குடை", "choices": [" எடுத்துட்டு போ", " சாப்பிடு", " தூங்கு"], "label": 0}
+{"category": "tanglish", "context": "Naan romba pasi ah iruken, konjam", "choices": [" bus ticket kudunga", " saapadu kudunga", " pen kudunga"], "label": 1}
+{"category": "tanglish", "context": "Mazhai varudhu, umbrella", "choices": [" saapdu", " thoongu", " eduthutu po"], "label": 2}
+{"category": "english", "context": "The capital of France is", "choices": [" Berlin", " Madrid", " Paris", " London"], "label": 2}
+{"category": "english", "context": "Water freezes at zero degrees", "choices": [" dollars", " kilometers", " minutes", " Celsius"], "label": 3}
+{"category": "english", "context": "The largest planet in our solar system is", "choices": [" Mars", " Mercury", " Jupiter", " Venus"], "label": 2}

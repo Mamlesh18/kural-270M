@@ -1,0 +1,12 @@
+# Gemma 3 270M + Gemma tokenizer extended with Tamil pieces (default strategy).
+# English/code tokenization is unchanged; new Tamil rows are initialized from the mean of
+# the Gemma sub-token embeddings they replace.
+model:
+  source: pretrained
+  load_dtype: fp32             # fp32 master weights; bf16 autocast via train.precision
+  attn_implementation: sdpa    # Gemma 3 has no attention soft-capping, so SDPA is exact
+  pad_vocab_to_multiple_of: 64
+
+tokenizer:
+  adaptation: extend
+  path: ${paths.tokenizers}/gemma3_tamil_extended

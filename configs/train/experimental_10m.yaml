@@ -1,0 +1,57 @@
+# ~10M-parameter experimental run (200 steps x 4k tokens): verifies the full training stack on a laptop
+# CPU in ~10-15 minutes (well under a minute on a GPU) before launching the 270M run.
+# Run:  python -m training.pretrain --config configs/train/experimental_10m.yaml
+defaults:
+  - ../base.yaml
+  - ../model/scratch_10m.yaml
+  - mixture_smoke.yaml
+
+run_name: exp10m-tamil16k
+
+wandb:
+  mode: offline          # logs to ./wandb locally; set WANDB_MODE=online + WANDB_API_KEY to sync
+  group: smoke
+  tags: [experimental, 10m, scratch]
+
+data:
+  packed_dir: ${paths.packed}/smoke_tamil16k_seq256
+  seq_len: 256
+
+train:
+  output_dir: ${paths.checkpoints}/${run_name}
+  resume: auto
+  precision: auto
+  trainable: all
+  args:
+    max_steps: 200
+    per_device_train_batch_size: 16
+    per_device_eval_batch_size: 16
+    gradient_accumulation_steps: 1
+    learning_rate: 1.0e-3
+    lr_scheduler_type: cosine_with_min_lr
+    lr_scheduler_kwargs: {min_lr_rate: 0.1}
+    warmup_steps: 20
+    weight_decay: 0.1
+    adam_beta1: 0.9
+    adam_beta2: 0.95
+    max_grad_norm: 1.0
+    optim: adamw_torch_fused
+    logging_steps: 10
+    eval_strategy: steps
+    eval_steps: 50
+    save_strategy: steps
+    save_steps: 50
+    save_total_limit: 2
+    gradient_checkpointing: false
+    dataloader_num_workers: 0
+    ddp_find_unused_parameters: false
+    remove_unused_columns: false
+    include_num_input_tokens_seen: false
+
+sample_generation:
+  max_new_tokens: 32
+  prompts:
+    - "தமிழ்நாட்டின் தலைநகரம்"
+    - "இந்தியாவின் மிகப்பெரிய"
+    - "Naan inniki"
+    - "The history of"

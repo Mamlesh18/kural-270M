@@ -1,0 +1,110 @@
+# CPU-sized Tamil SFT of Gemma 3 270M-it (runs in ~3 hours on a 4-core laptop).
+#
+# Measured on this machine: ~40 tok/s for full training, ~55 tok/s with the two SFT
+# speed-ups below — far too slow for continued pretraining (10B tokens ≈ 8 years), so
+# the CPU recipe instruction-tunes Google's instruction-tuned checkpoint on Tamil data.
+# The original Gemma tokenizer is kept: new Tamil token embeddings need hundreds of
+# millions of tokens to train, and would start near-random here. Model size: 268.1M.
+#
+# Run:  python -m training.sft --config configs/sft/sft_270m_cpu.yaml
+defaults:
+  - sft_270m.yaml
+
+run_name: kural-270m-cpu-sft
+
+base_model:
+  name_or_path: ${oc.env:KURAL_CHAT_BASE,unsloth/gemma-3-270m-it}   # ungated mirror of google/gemma-3-270m-it
+
+model:
+  source: pretrained
+  load_dtype: fp32            # this CPU has no fast bf16 path (bf16 steps were >20x slower)
+  attn_implementation: sdpa
+
+tokenizer:
+  adaptation: none
+
+wandb:
+  mode: offline
+  group: cpu
+  tags: [sft, cpu, 270m]
+
+sft:
+  max_seq_len: 384            # longer examples are dropped (keeps steps short on CPU)
+  truncation: drop
+  eval_fraction: 0.03
+  label_only_logits: true     # output layer only at answer tokens (2.3x faster with frozen embeddings)
+  sources:
+    - name: tamil_alpaca_orca     # random sample (includes Tamil Alpaca rows)
+      type: hf
+      path: abhinand/tamil-alpaca-orca
+      split: train
+      streaming: false
+      format: alpaca
+      shuffle_seed: 1
+      max_docs: 1500
+    - name: aya_tamil             # human-written Tamil prompts / answers
+      type: hf
+      path: CohereForAI/aya_dataset
+      split: train
+      streaming: false
+      format: prompt_response
+      fields: {prompt: inputs, response: targets}
+      filter: {field: language, equals: Tamil}
+      shuffle_seed: 2
+      max_docs: 600
+    - name: tamil_squad           # reading comprehension
+      type: hf
+      path: RajeevanL/tamil_squad-2.0
+      split: train
+      streaming: false
+      format: qa
+      fields: {context: Context, question: Question, answer: Answer}
+      strip_prefixes: ["சூழல்:"]
+      unanswerable_response: null
+      shuffle_seed: 3
+      max_docs: 500
+    - name: english_replay        # keeps English instruction following
+      type: hf
+      path: yahma/alpaca-cleaned
+      split: train
+      streaming: false
+      format: alpaca
+      shuffle_seed: 4
+      max_docs: 300
+    - name: sample_sft            # 16 hand-written items incl. Tanglish / spoken Tamil
+      type: jsonl
+      path: ${repo_root:}/data/samples/sft_sample.jsonl
+      format: alpaca
+
+train:
+  output_dir: ${paths.checkpoints}/${run_name}
+  resume: auto
+  precision: fp32
+  trainable: no_embeddings    # freeze the 168M-param tied embedding (vocab unchanged)
+  args:
+    num_train_epochs: 1
+    per_device_train_batch_size: 4
+    per_device_eval_batch_size: 8
+    gradient_accumulation_steps: 4     # 16 conversations per optimizer step
+    learning_rate: 5.0e-5
+    lr_scheduler_type: cosine
+    warmup_ratio: 0.05
+    weight_decay: 0.0
+    max_grad_norm: 1.0
+    optim: adamw_torch
+    neftune_noise_alpha: 5
+    group_by_length: true              # batches of similar length → less padding
+    logging_steps: 5
+    eval_strategy: steps
+    eval_steps: 60
+    save_strategy: steps
+    save_steps: 20                     # checkpoint often: an interrupted run resumes
+    save_total_limit: 2
+    dataloader_num_workers: 0
+    remove_unused_columns: false
+
+sample_generation:
+  max_new_tokens: 40
+  prompts:
+    - "தமிழ்நாட்டின் தலைநகரம் எது?"
+    - "Naan romba tired ah iruken, enna pannalam?"

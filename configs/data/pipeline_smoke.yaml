@@ -1,0 +1,58 @@
+# Small, fast pipeline for verifying the whole stack (a few minutes on a laptop CPU).
+# Run:  python -m data.pipeline --config configs/data/pipeline_smoke.yaml
+defaults:
+  - ../base.yaml
+  - common.yaml
+
+output_dir: ${paths.processed}/smoke
+overwrite: true
+num_workers: 2
+log_every: 1000
+
+sources:
+  - name: wiki_ta
+    type: hf
+    path: wikimedia/wikipedia
+    config_name: 20231101.ta
+    split: train
+    streaming: true
+    text_field: text
+    max_docs: 6000
+    category: ta_wiki
+    lang_hint: ta
+    allowed_langs: [ta, code_mixed]
+  - name: wiki_en
+    type: hf
+    path: wikimedia/wikipedia
+    config_name: 20231101.en
+    split: train
+    streaming: true
+    text_field: text
+    max_docs: 1500
+    category: en
+    lang_hint: en
+    allowed_langs: [en]
+  - name: sample_tanglish               # small hand-written seed set bundled with the repo
+    type: jsonl
+    path: ${repo_root:}/data/samples/tanglish_spoken_sample.jsonl
+    text_field: text
+    category: tanglish
+    lang_hint: tanglish
+    allowed_langs: [tanglish, code_mixed, ta]
+    category_by_lang: {ta: ta_spoken}
+    quality_profile: spoken
+
+split:
+  eval_fraction: 0.05
+  eval_max_docs_per_category: 300
+
+sharding:
+  docs_per_shard: 2000
+  compress: false
+
+augment:
+  enabled: true
+  source_langs: [ta]
+  tanglish_fraction: 0.10
+  spoken_fraction: 0.05
+  variant_prob: 0.15

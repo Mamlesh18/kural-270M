@@ -1,0 +1,27 @@
+# Mixture over the smoke corpus (configs/data/pipeline_smoke.yaml).
+data:
+  processed_dir: ${paths.processed}/smoke
+  mixture:
+    ta_wiki: 0.60
+    ta_spoken: 0.005
+    ta_spoken_synthetic: 0.04
+    tanglish: 0.005
+    tanglish_synthetic: 0.06
+    code_mixed: 0.04
+    en: 0.25
+  max_epochs: 4.0
+  max_epochs_per_category:
+    ta_spoken_synthetic: 1.0
+    tanglish_synthetic: 1.0
+    en: 1.0
+  eval_sets:
+    ta: [ta_wiki]
+    ta_spoken: [ta_spoken]
+    tanglish: [tanglish, code_mixed]
+    en: [en]
+  eval_max_blocks: 200
+  add_bos: true
+  add_eos: true
+  num_proc: 1
+  auto_prepare: true
+  overwrite_packed: false

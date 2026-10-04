@@ -1,0 +1,96 @@
+# Cleaning settings shared by the full and smoke pipelines.
+overwrite: false
+log_every: 10000
+
+normalize:
+  unicode_form: NFC
+  html_unescape: true
+  remove_invisible: true
+  remove_control: true
+  fix_tamil_signs: true
+  unify_sri: true
+  tamil_digits_to_ascii: false
+  normalize_quotes: true
+  normalize_dashes: true
+  urls: remove
+  emails: mask
+  phones: mask
+  collapse_whitespace: true
+  max_consecutive_newlines: 2
+
+line_filter:
+  enabled: true
+  min_chars: 0
+  min_words: 0
+  boilerplate_patterns: boilerplate_patterns.txt
+  drop_lines_with_curly_braces: true
+  max_line_repeats: 1
+
+langid:
+  min_letters: 20
+  tamil_min_ratio: 0.60
+  code_mixed_min_latin: 0.15
+  code_mixed_min_tamil: 0.15
+  latin_min_ratio: 0.80
+  tanglish_min_score: 0.12
+  english_min_score: 0.08
+  fasttext_model: ${oc.env:KURAL_FASTTEXT_LID,null}
+
+# Per-profile thresholds. A doc uses its source's `quality_profile`, else its detected
+# language label; unknown profiles fall back to `default`.
+quality:
+  default:
+    min_chars: 200
+    min_words: 30
+    min_mean_word_len: 2.5
+    max_mean_word_len: 12.0
+  ta:
+    # Tamil is agglutinative: long words are normal.
+    min_mean_word_len: 3.0
+    max_mean_word_len: 20.0
+    min_stopwords: 2
+    stopwords: tamil_stopwords.txt
+  code_mixed:
+    min_mean_word_len: 2.5
+    max_mean_word_len: 18.0
+  ta_literature:
+    # Poetry: short lines, repetition is stylistic.
+    min_chars: 100
+    min_words: 10
+    max_mean_word_len: 20.0
+    max_dup_line_frac: 0.5
+    max_top_ngram_frac: {2: 0.3, 3: 0.3, 4: 0.3}
+    max_dup_ngram_frac: {5: 0.4, 7: 0.35, 10: 0.3}
+  spoken:
+    # Comments / chat / transcripts are short.
+    min_chars: 20
+    min_words: 4
+    min_mean_word_len: 2.0
+    max_mean_word_len: 18.0
+    max_punct_frac: 0.35
+  tanglish:
+    min_chars: 20
+    min_words: 4
+    min_mean_word_len: 2.0
+    max_mean_word_len: 12.0
+  en:
+    min_stopwords: 3
+    stopwords: english_stopwords.txt
+
+dedup:
+  exact: true
+  near: true
+  ngram: 5
+  char_ngram: 12
+  bands: 10
+  rows: 12
+  verify_threshold: 0.8
+  seed: ${seed}
+
+split:
+  eval_fraction: 0.005
+  eval_max_docs_per_category: 2000
+
+sharding:
+  docs_per_shard: 50000
+  compress: true

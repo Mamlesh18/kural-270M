@@ -216,3 +216,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---- kural-270M project artifacts ----
+# All generated data, tokenizers, checkpoints and reports live under the
+# workspace (default ./workspace, override with KURAL_WORKSPACE).
+workspace/
+wandb/
+*.gguf
+*.safetensors
+*.bin
+*.pt

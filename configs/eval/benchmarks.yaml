@@ -1,0 +1,21 @@
+# Zero-shot log-likelihood benchmarks (see evaluation/benchmarks.py).
+eval:
+  benchmarks:
+    - name: tamil_cloze_sanity          # 22 hand-written items: facts, grammar, spoken, Tanglish, English
+      type: jsonl
+      path: ${repo_root:}/evaluation/resources/tamil_cloze.jsonl
+      adapter: cloze
+    - name: indic_copa_ta               # 500 items, 2 choices (chance = 0.5)
+      type: hf
+      path: json
+      data_files: hf://datasets/ai4bharat/IndicCOPA/data/test.ta.jsonl
+      split: train
+      streaming: false
+      adapter: copa
+    - name: indic_sentiment_ta          # 1000 reviews, Positive/Negative (chance ~ 0.5)
+      type: hf
+      path: json
+      data_files: hf://datasets/ai4bharat/IndicSentiment/data/test/ta.json
+      split: train
+      streaming: false
+      adapter: sentiment

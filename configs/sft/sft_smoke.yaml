@@ -1,0 +1,43 @@
+# SFT smoke test on the 10M experimental model with the bundled sample instructions.
+# Run:  python -m training.sft --config configs/sft/sft_smoke.yaml
+defaults:
+  - sft_270m.yaml
+
+run_name: exp10m-sft
+
+model:
+  path: ${paths.checkpoints}/exp10m-tamil16k/final
+
+wandb:
+  mode: offline
+  group: smoke
+  tags: [sft, smoke]
+
+sft:
+  max_seq_len: 256
+  eval_fraction: 0.15
+  repeat: 8
+  sources:
+    - name: sample_sft
+      type: jsonl
+      path: ${repo_root:}/data/samples/sft_sample.jsonl
+      format: alpaca
+
+train:
+  args:
+    num_train_epochs: 1
+    per_device_train_batch_size: 8
+    per_device_eval_batch_size: 8
+    gradient_accumulation_steps: 1
+    learning_rate: 5.0e-4
+    warmup_ratio: 0.1
+    eval_steps: 10
+    save_steps: 10
+    save_total_limit: 1
+    logging_steps: 2
+    dataloader_num_workers: 0
+    neftune_noise_alpha: null
+
+sample_generation:
+  max_new_tokens: 24
+  prompts: ["தமிழ்நாட்டின் தலைநகரம் எது?"]

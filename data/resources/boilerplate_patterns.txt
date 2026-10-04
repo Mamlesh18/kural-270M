@@ -1,0 +1,25 @@
+# Case-insensitive substrings. A LINE containing one of these is dropped by the
+# line filter (web boilerplate, navigation, cookie notices). One per line.
+cookie policy
+privacy policy
+terms of use
+terms and conditions
+all rights reserved
+subscribe to our
+click here
+share this
+follow us on
+javascript is disabled
+enable javascript
+lorem ipsum
+sign up for our newsletter
+copyright ©
+© copyright
+read more
+மேலும் படிக்க
+இதையும் படிங்க
+இதையும் படிக்க
+பகிர்ந்து கொள்ள
+எங்களை பின்தொடர
+அனைத்து உரிமைகளும்
+பதிப்புரிமை

@@ -1,0 +1,10 @@
+# Extend Gemma with the 32k Tamil BPE trained on the sample corpus.
+defaults:
+  - extend_gemma.yaml
+
+adapt:
+  tamil_tokenizer_dir: ${paths.tokenizers}/tamil_bpe_32k_sample
+  output_dir: ${paths.tokenizers}/gemma3_tamil_extended_sample
+  processed_dir: ${paths.processed}/sample
+  report_categories: [ta_web, ta_wiki, ta_translated, code_mixed, tanglish_synthetic, en]
+  report_docs_per_category: 300
